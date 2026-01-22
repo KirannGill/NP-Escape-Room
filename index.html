@@ -304,23 +304,117 @@
                 ]
             },
             {
-                type: 'activity3',
-                title: 'Activity 3: SNNOOP10 Rapid Recall',
-                subtitle: 'Type the correct keyword for each letter. You have 10 seconds per word!',
-                content: `<p class="text-sm text-gray-600">Learning Outcome 3: Remembering red flag symptoms for serious conditions.</p>`,
-                mnemonic: [
-                    { letter: 'S', keyword: 'Systemic symptoms', hint: 'Think fever, weight loss...' },
-                    { letter: 'N', keyword: 'Neurological symptoms', hint: 'Weakness, numbness...' },
-                    { letter: 'N', keyword: 'New onset headache', hint: 'Sudden, first-time...' },
-                    { letter: 'O', keyword: 'Other associated conditions', hint: 'HIV, cancer...' },
-                    { letter: 'O', keyword: 'Onset with exertion', hint: 'Sudden, with coughing...' },
-                    { letter: 'P', keyword: 'Papilledema', hint: 'Swelling of optic disc...' },
-                    { letter: 'P', keyword: 'Postural', hint: 'Changes with position...' },
-                    { letter: 'P', keyword: 'Pregnancy', hint: 'Headache during...' },
-                    { letter: 'P', keyword: 'Pain medication overuse', hint: 'From taking too many meds...' },
-                    { letter: '10', keyword: 'Age over 50 or under 10', hint: 'Risk factors...' }
-                ]
-            },
+    type: 'activity3',
+    title: 'Activity 3: SNNOOP10 Red Flag Recognition',
+    subtitle: 'Identify red flag symptoms for serious headache conditions.',
+    content: `<p class="text-sm text-gray-600">Learning Outcome 3: Recognizing red flag symptoms using the SNNOOP10 mnemonic.</p>`,
+    parts: {
+        part1: {
+            title: 'Part 1: Red Flag or Green Flag',
+            description: 'Drag the symptoms to the correct category.',
+            items: [
+                { name: 'History of Neoplasm', type: 'red' },
+                { name: 'A common migraine or tension-type headache with a stable pattern of recurrent pain without significant changes over several years', type: 'green' },
+                { name: 'Papilledema', type: 'red' },
+                { name: 'Posttraumatic headaches if greater than three months', type: 'red' },
+                { name: 'Systemic headaches with an isolated fever', type: 'red' },
+                { name: 'Headache that improves with over-the-counter medication', type: 'green' },
+                { name: 'Headache with new neurological deficits', type: 'red' },
+                { name: 'Headache in patient over 50 years old', type: 'red' },
+                { name: 'Recurrent headache with family history of migraines', type: 'green' },
+                { name: 'Headache that awakens patient from sleep', type: 'red' }
+            ]
+        },
+        part2: {
+            title: 'Part 2: SNNOOP10 Knowledge Check',
+            description: 'Answer these questions about the SNNOOP10 mnemonic (unlimited attempts)',
+            questions: [
+                {
+                    question: 'This is the number of symptoms that fall under the SNNOOP10 mnemonic',
+                    answer: '10',
+                    hint: 'The name gives it away!'
+                },
+                {
+                    question: 'This is the type of headache that SNNOOP10 covers',
+                    answer: 'secondary',
+                    hint: 'Think about what kind of headaches have red flags'
+                },
+                {
+                    question: 'This decade was when the SNNOOP10 system was introduced',
+                    answer: '2000s',
+                    hint: 'It was developed in the 21st century'
+                },
+                {
+                    question: 'This represents the severity of the symptom in the SNNOOP10 mnemonic',
+                    answer: 'severity',
+                    hint: 'The "10" represents this aspect'
+                },
+                {
+                    question: 'This type of headache is often described as a throbbing pain on one side of the head, accompanied by nausea and sensitivity to light and sound',
+                    answer: 'migraine',
+                    hint: 'A common primary headache disorder'
+                },
+                {
+                    question: 'This rare condition involves sudden, excruciating headaches often likened to "the worst headache of my life," which may result from a rupture or leaking of a blood vessel in the brain',
+                    answer: 'subarachnoid hemorrhage',
+                    hint: 'Think about brain bleeds'
+                },
+                {
+                    question: 'Headaches in the third trimester of _____ warrants investigation for various disorders such as pre-eclampsia',
+                    answer: 'pregnancy',
+                    hint: 'A special condition in women'
+                },
+                {
+                    question: 'What\'s the pattern of headaches that is not typical in primary headache disorders and considered a red flag',
+                    answer: 'progressive',
+                    hint: 'Headaches that keep getting worse'
+                },
+                {
+                    question: 'What kind of headache is characterized by sudden, severe pain that peaks within seconds to minutes and may indicate a medical emergency such as a brain hemorrhage',
+                    answer: 'thunderclap',
+                    hint: 'Think about weather metaphors'
+                },
+                {
+                    question: 'These headaches occur as a result of prolonged use of pain relievers, typically rebounding in intensity after the medication wears off',
+                    answer: 'medication overuse',
+                    hint: 'Caused by the treatment itself'
+                }
+            ]
+        },
+        part3: {
+            title: 'Part 3: True or False',
+            description: 'Determine if these are SNNOOP10 symptoms (one attempt per question)',
+            questions: [
+                {
+                    question: 'Precipitated by cough is a SNNOOP10 symptom',
+                    answer: true,
+                    explanation: 'TRUE - Onset with exertion/cough is part of SNNOOP10'
+                },
+                {
+                    question: 'Photophobia and Phonophobia is a SNNOOP10 symptom',
+                    answer: false,
+                    explanation: 'FALSE - These are common in migraines but not red flags in SNNOOP10'
+                },
+                {
+                    question: 'Pulsating headache pattern is a SNNOOP10 symptom',
+                    answer: false,
+                    explanation: 'FALSE - Pulsating quality is typical of migraines, not a red flag'
+                },
+                {
+                    question: 'Sudden onset "Thunderclap" headache is a SNNOOP10 symptom',
+                    answer: true,
+                    explanation: 'TRUE - Sudden onset is a major red flag in SNNOOP10'
+                },
+                {
+                    question: 'Palpable temporal artery abnormalities is a SNNOOP10 symptom',
+                    answer: true,
+                    explanation: 'TRUE - This relates to giant cell arteritis, covered in SNNOOP10'
+                }
+            ]
+        }
+    }
+}
+,
             {
                 type: 'conclusion',
                 title: 'You escaped!',
@@ -528,7 +622,7 @@
             }
         ];
 
-        // New Second Patient Case
+        // New Second Patient Case 
         const secondPatientSteps = [
             {
                 type: 'second-patient-intro',
@@ -695,6 +789,184 @@
                         </ul>
                     </div>
                     <p class="mt-6 text-lg">Great job on completing this case! You've demonstrated excellent clinical reasoning skills.</p>
+                `
+            },
+
+            {
+                type: 'hannah-decision-point-1',
+                title: 'Decision Point',
+                content: `
+                    <p class="mb-4">Considering the patient's situation, use your understanding of the clues or pertinent positives or negatives from the subjective information in the case to determine your top four differential diagnoses, with one of those differentials including a secondary type of headache.</p>
+                    <p class="font-bold mb-2">Top differential diagnoses:</p>
+                    <div class="space-y-3 mt-4">
+                        <label class="flex items-center"><input type="checkbox" name="hannah-dx" value="depression" class="mr-3 h-5 w-5"> Depression</label>
+                        <label class="flex items-center"><input type="checkbox" name="hannah-dx" value="cluster"> Cluster headache</label>
+                        <label class="flex items-center"><input type="checkbox" name="hannah-dx" value="medication"> Medication overuse headache</label>
+                        <label class="flex items-center"><input type="checkbox" name="hannah-dx" value="meningitis"> Meningitis</label>
+                        <label class="flex items-center"><input type="checkbox" name="hannah-dx" value="migraine"> Migraine with aura</label>
+                        <label class="flex items-center"><input type="checkbox" name="hannah-dx" value="madcow"> Mad cow disease</label>
+                        <label class="flex items-center"><input type="checkbox" name="hannah-dx" value="space"> Space occupying lesion</label>
+                        <label class="flex items-center"><input type="checkbox" name="hannah-dx" value="tension"> Tension type headache</label>
+                        <label class="flex items-center"><input type="checkbox" name="hannah-dx" value="temporal"> Temporal arteritis</label>
+                    </div>
+                    <div id="hannah-dx-feedback" class="mt-4 text-center font-semibold hidden"></div>
+                `
+            },
+            {
+                type: 'hannah-physical-assessment',
+                title: 'Physical Assessment',
+                content: `
+                    <div class="space-y-4">
+                        <div>
+                            <p class="font-bold">Vitals:</p>
+                            <p>BP 120/80, HR 75, Temp 37.0 C oral, RR 16 and regular</p>
+                        </div>
+                        <div>
+                            <p class="font-bold">General Appearance:</p>
+                            <p>Appears well, no visible signs of distress. Good hygiene and appropriate dress.</p>
+                        </div>
+                        <div>
+                            <p class="font-bold">Skin:</p>
+                            <p>Flesh, warm, dry, no visible rashes</p>
+                        </div>
+                        <div>
+                            <p class="font-bold">HEENT:</p>
+                            <p>no pain or tenderness to head/face. TMs clear bilaterally. Mouth moist, no exudate or erythema. Nose mucosa, pink, normal appearing turbinates, no exudate. Eyes. Sclera white, no injection, positive red reflex, disks clear and sharp. EOMI. PERRLA 4mm.</p>
+                        </div>
+                        <div>
+                            <p class="font-bold">Chest:</p>
+                            <p>Clear anteriorly and posteriorly.</p>
+                        </div>
+                        <div>
+                            <p class="font-bold">Heart:</p>
+                            <p>HS S1S2 regular, no extra sounds or murmurs.</p>
+                        </div>
+                        <div>
+                            <p class="font-bold">Abdomen:</p>
+                            <p>Soft, bowel sounds present, no obvious masses or organomegaly. No evidence of acute abdomen.</p>
+                        </div>
+                        <div>
+                            <p class="font-bold">Neurological/Musculoskeletal:</p>
+                            <p>No focal deficits. Cranial nerves II through XII grossly intact. Strength +5 bilaterally, cerebellar function and sensation intact. Deep Tendon Reflexes: +2 bilaterally. Steady gait, Romberg negative with no pronator drift.</p>
+                        </div>
+                    </div>
+                `
+            },
+            {
+                type: 'hannah-decision-point-2',
+                title: 'Decision Point',
+                content: `
+                    <p class="mb-4">Considering the patient's situation, use your understanding of the clues or pertinent positives or negatives from the information in the case to determine your working primary differential followed by three less likely differentials in order of likelihood.</p>
+                    <div class="mb-6">
+                        <p class="font-semibold mb-2">Options:</p>
+                        <p>1 - Medication overuse headache</p>
+                        <p>2 - Cluster headache</p>
+                        <p>3 - Tension type headache</p>
+                        <p>4 - Migraine headache with aura</p>
+                    </div>
+                    <p class="font-bold mb-2">Enter the order below: (Ex. 5678)</p>
+                    <input type="text" id="order-input" class="w-32 px-3 py-2 border border-gray-300 rounded-lg text-center text-xl font-bold" maxlength="4" placeholder="____">
+                    <div id="order-feedback" class="mt-4 text-center font-semibold hidden"></div>
+                    <button id="submit-order" class="mt-4 px-6 py-3 bg-green-500 text-white rounded-lg font-semibold shadow-md hover:bg-green-600 transition-colors">Submit Order</button>
+                `
+            },
+            {
+                type: 'hannah-congratulations',
+                title: 'Congratulations!',
+                content: `
+                    <p class="mb-4">Congratulations on narrowing your differentials to include a working diagnosis of migraine headache with aura with differential diagnosis of medication overuse headache, tension-type headache, and cluster headache.</p>
+                    <p class="mb-4">We have added another challenge for you to complete, to illustrate the clinical diagnostic reasoning and decision-making accounting for the prioritization of these differential diagnoses.</p>
+                    <p class="font-bold mb-4">You must select the best answer for each question.</p>
+                `
+            },
+            {
+                type: 'hannah-quiz-1',
+                title: 'Clinical Reasoning Challenge',
+                content: `
+                    <div class="space-y-6">
+                        <div>
+                            <p class="font-bold mb-2">Migraine with aura: Pertinent positive findings</p>
+                            <div class="space-y-2">
+                                <label class="flex items-center"><input type="radio" name="quiz1" value="A" class="mr-2"> A - Pertinent positive findings include headaches that last roughly 10 to 72 hours, start gradually and progress over time, moderate to severe intensity, unilateral presentation, throbbing character, preceded by an aura, associated with nausea, phonophobia, photophobia, possibly triggered by chocolate, caffeine, stress, menstrual cycle, no red flag features, normal physical examination. Family hx of migraine headaches.</label>
+                                <label class="flex items-center"><input type="radio" name="quiz1" value="B" class="mr-2"> B - Pertinent positive findings include female biological sex, headaches occurring on 15 or more days per months +/- a pre-existing headache disorder not yet diagnosed, smoking history, regular intake of Tylenol and Advil for ≥15 days per month for >3 months, nausea, no red flag features, normal physical exam.</label>
+                                <label class="flex items-center"><input type="radio" name="quiz1" value="C" class="mr-2"> C - Pertinent positive findings include headaches that last roughly 10 to 72 hours, start gradually and progress over time, present following a stressful day at work. Review of systems negative with no red flag features.</label>
+                                <label class="flex items-center"><input type="radio" name="quiz1" value="D" class="mr-2"> D - Pertinent positive findings include unilateral headache presentation and severe intensity.</label>
+                            </div>
+                        </div>
+                        <div id="quiz1-feedback" class="text-center font-semibold hidden"></div>
+                        <button id="submit-quiz1" class="px-6 py-3 bg-green-500 text-white rounded-lg font-semibold shadow-md hover:bg-green-600 transition-colors">Submit Answer</button>
+                    </div>
+                `
+            },
+            {
+                type: 'hannah-quiz-2',
+                title: 'Clinical Reasoning Challenge',
+                content: `
+                    <div class="space-y-6">
+                        <div>
+                            <p class="font-bold mb-2">Medication overuse headache: Pertinent positive findings</p>
+                            <div class="space-y-2">
+                                <label class="flex items-center"><input type="radio" name="quiz2" value="A" class="mr-2"> A - Pertinent positive findings include unilateral headache presentation and severe intensity.</label>
+                                <label class="flex items-center"><input type="radio" name="quiz2" value="B" class="mr-2"> B - Pertinent positive findings include female biological sex, headaches occurring on 15 or more days per months +/- a pre-existing headache disorder not yet diagnosed, smoking history, regular intake of Tylenol and Advil for ≥15 days per month for >3 months, nausea, no red flag features, normal physical exam.</label>
+                                <label class="flex items-center"><input type="radio" name="quiz2" value="C" class="mr-2"> C - Pertinent positive findings include headaches that last roughly 10 to 72 hours, start gradually and progress over time, present following a stressful day at work. Review of systems negative with no red flag features.</label>
+                                <label class="flex items-center"><input type="radio" name="quiz2" value="D" class="mr-2"> D - Pertinent positive findings include headaches that last roughly 10 to 72 hours, start gradually and progress over time, moderate to severe intensity, unilateral presentation, throbbing character, preceded by an aura, associated with nausea, phonophobia, photophobia, possibly triggered by chocolate, caffeine, stress, menstrual cycle, no red flag features, normal physical examination. Family hx of migraine headaches.</label>
+                            </div>
+                        </div>
+                        <div id="quiz2-feedback" class="text-center font-semibold hidden"></div>
+                        <button id="submit-quiz2" class="px-6 py-3 bg-green-500 text-white rounded-lg font-semibold shadow-md hover:bg-green-600 transition-colors">Submit Answer</button>
+                    </div>
+                `
+            },
+            {
+                type: 'hannah-quiz-3',
+                title: 'Clinical Reasoning Challenge',
+                content: `
+                    <div class="space-y-6">
+                        <div>
+                            <p class="font-bold mb-2">Tension-type headaches: Pertinent positive findings</p>
+                            <div class="space-y-2">
+                                <label class="flex items-center"><input type="radio" name="quiz3" value="A" class="mr-2"> A - Pertinent positive findings include headaches that last roughly 10 to 72 hours, start gradually and progress over time, moderate to severe intensity, unilateral presentation, throbbing character, preceded by an aura, associated with nausea, phonophobia, photophobia, possibly triggered by chocolate, caffeine, stress, menstrual cycle, no red flag features, normal physical examination. Family hx of migraine headaches.</label>
+                                <label class="flex items-center"><input type="radio" name="quiz3" value="B" class="mr-2"> B - Pertinent positive findings include headaches that last roughly 10 to 72 hours, start gradually and progress over time, present following a stressful day at work. Review of systems negative with no red flag features.</label>
+                                <label class="flex items-center"><input type="radio" name="quiz3" value="C" class="mr-2"> C - Pertinent positive findings include unilateral headache presentation and severe intensity.</label>
+                                <label class="flex items-center"><input type="radio" name="quiz3" value="D" class="mr-2"> D - Pertinent positive findings include female biological sex, headaches occurring on 15 or more days per months +/- a pre-existing headache disorder not yet diagnosed, smoking history, regular intake of Tylenol and Advil for ≥15 days per month for >3 months, nausea, no red flag features, normal physical exam.</label>
+                            </div>
+                        </div>
+                        <div id="quiz3-feedback" class="text-center font-semibold hidden"></div>
+                        <button id="submit-quiz3" class="px-6 py-3 bg-green-500 text-white rounded-lg font-semibold shadow-md hover:bg-green-600 transition-colors">Submit Answer</button>
+                    </div>
+                `
+            },
+            {
+                type: 'hannah-quiz-4',
+                title: 'Clinical Reasoning Challenge',
+                content: `
+                    <div class="space-y-6">
+                        <div>
+                            <p class="font-bold mb-2">Cluster headache: Pertinent positive findings</p>
+                            <div class="space-y-2">
+                                <label class="flex items-center"><input type="radio" name="quiz4" value="A" class="mr-2"> A - Pertinent positive findings include headaches that last roughly 10 to 72 hours, start gradually and progress over time, present following a stressful day at work. Review of systems negative with no red flag features.</label>
+                                <label class="flex items-center"><input type="radio" name="quiz4" value="B" class="mr-2"> B - Pertinent positive findings include headaches that last roughly 10 to 72 hours, start gradually and progress over time, moderate to severe intensity, unilateral presentation, throbbing character, preceded by an aura, associated with nausea, phonophobia, photophobia, possibly triggered by chocolate, caffeine, stress, menstrual cycle, no red flag features, normal physical examination. Family hx of migraine headaches.</label>
+                                <label class="flex items-center"><input type="radio" name="quiz4" value="C" class="mr-2"> C - Pertinent positive findings include female biological sex, headaches occurring on 15 or more days per months +/- a pre-existing headache disorder not yet diagnosed, smoking history, regular intake of Tylenol and Advil for ≥15 days per month for >3 months, nausea, no red flag features, normal physical exam.</label>
+                                <label class="flex items-center"><input type="radio" name="quiz4" value="D" class="mr-2"> D - Pertinent positive findings include unilateral headache presentation and severe intensity.</label>
+                            </div>
+                        </div>
+                        <div id="quiz4-feedback" class="text-center font-semibold hidden"></div>
+                        <button id="submit-quiz4" class="px-6 py-3 bg-green-500 text-white rounded-lg font-semibold shadow-md hover:bg-green-600 transition-colors">Submit Answer</button>
+                    </div>
+                `
+            },
+            {
+                type: 'hannah-final-congrats',
+                title: 'Excellent Work!',
+                content: `
+                    <div class="text-center">
+                        <p class="text-xl mb-6">Congratulations!! <br> You have successfully completed all the clinical reasoning challenges for Hannah Howard's case!</p>
+                        <div class="p-6 bg-green-50 rounded-lg mb-6">
+                            <h3 class="text-2xl font-bold text-green-800 mb-4">Case Summary</h3>
+                            <p class="text-green-700">Your clinical reasoning skills helped identify the correct diagnosis and understand the pertinent findings for each differential diagnosis. This demonstrates excellent clinical judgment and diagnostic reasoning abilities.</p>
+                        </div>
+                        <p class="text-lg">You have completed the escape room challenge!</p>
+                    </div>
                 `
             }
         ];
@@ -1014,111 +1286,291 @@
         }
         
         function renderActivity3(step) {
-            contentArea.innerHTML = `
-                <section class="flex flex-col gap-4 text-center">
-                    <h2 class="text-2xl font-bold text-gray-800">${step.title}</h2>
-                    <p class="text-lg text-gray-700">${step.subtitle}</p>
-                    ${step.content}
-                    <div id="timer-bar" class="w-full h-8 bg-gray-200 rounded-lg overflow-hidden mt-4">
-                        <div id="timer-fill" class="h-full bg-yellow-500 transition-all duration-1000"></div>
+    let currentPart = 1;
+    let part1Score = { correct: 0, total: step.parts.part1.items.length };
+    let part2Score = { correct: 0, total: step.parts.part2.questions.length };
+    let part3Score = { correct: 0, total: step.parts.part3.questions.length };
+    let part3Attempted = Array(step.parts.part3.questions.length).fill(false);
+
+    function renderPart1() {
+        const shuffledItems = [...step.parts.part1.items].sort(() => Math.random() - 0.5);
+        
+        const itemsHtml = shuffledItems.map((item, index) =>
+            `<div id="item-${index}" class="symptom-card cursor-pointer bg-blue-500 text-white px-4 py-3 rounded-lg font-medium text-sm text-center shadow-md transition-all duration-200" draggable="true" data-type="${item.type}">${item.name}</div>`
+        ).join('');
+
+        contentArea.innerHTML = `
+            <section class="flex flex-col gap-4">
+                <h2 class="text-2xl font-bold text-gray-800">${step.title} - ${step.parts.part1.title}</h2>
+                <p class="text-lg text-gray-700">${step.parts.part1.description}</p>
+                ${step.content}
+                
+                <div id="item-container" class="flex flex-wrap gap-2 p-4 bg-gray-200 rounded-lg min-h-[100px] mt-4">
+                    ${itemsHtml}
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                    <div class="category-box drop-target p-4 rounded-xl shadow-inner bg-red-100 border-2 border-red-300" data-type="red">
+                        <h3 class="text-xl font-bold text-center mb-3 text-red-800">🚩 Red Flag</h3>
+                        <div class="cards-area flex flex-wrap gap-2 min-h-[100px]"></div>
                     </div>
-                    <div id="snnoop-display" class="mt-6 text-6xl font-bold text-blue-600"></div>
-                    <div class="mt-4">
-                        <input type="text" id="keyword-input" class="w-full md:w-2/3 px-4 py-3 text-center border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Type the keyword...">
+                    <div class="category-box drop-target p-4 rounded-xl shadow-inner bg-green-100 border-2 border-green-300" data-type="green">
+                        <h3 class="text-xl font-bold text-center mb-3 text-green-800">✅ Green Flag</h3>
+                        <div class="cards-area flex flex-wrap gap-2 min-h-[100px]"></div>
                     </div>
-                    <div id="snnoop-feedback" class="mt-4 text-sm text-gray-600"></div>
-                    <div id="snnoop-hint" class="mt-2 text-sm text-gray-500 hidden"></div>
-                </section>
-                ${updateScoreboard()}
-            `;
-            backButton.classList.remove('hidden');
-            nextButton.classList.add('hidden');
+                </div>
+                
+                <div class="flex justify-between items-center mt-6">
+                    <span class="text-sm text-gray-600">Correct: ${part1Score.correct}/${part1Score.total}</span>
+                    <button id="next-part-1" class="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold shadow-md hover:bg-blue-700 transition-colors ${part1Score.correct === part1Score.total ? '' : 'hidden'}">
+                        Continue to Part 2
+                    </button>
+                </div>
+            </section>
+        `;
 
-            const mnemonic = step.mnemonic;
-            let currentKeywordIndex = 0;
-            let timerInterval;
-            const timerDuration = 10;
-            let timeRemaining = timerDuration;
+        // Drag and drop functionality
+        const itemContainer = document.getElementById('item-container');
+        const dropTargets = document.querySelectorAll('.drop-target');
+        let dragItem = null;
 
-            const timerFill = document.getElementById('timer-fill');
-            const snnoopDisplay = document.getElementById('snnoop-display');
-            const keywordInput = document.getElementById('keyword-input');
-            const snnoopFeedback = document.getElementById('snnoop-feedback');
-            const snnoopHint = document.getElementById('snnoop-hint');
+        document.querySelectorAll('.symptom-card').forEach(card => {
+            card.addEventListener('dragstart', (e) => {
+                dragItem = e.target;
+                e.dataTransfer.setData('text/plain', e.target.dataset.type);
+                e.target.classList.add('is-dragging');
+            });
+            card.addEventListener('dragend', (e) => {
+                e.target.classList.remove('is-dragging');
+            });
+        });
 
-            function startTimer() {
-                clearInterval(timerInterval);
-                timeRemaining = timerDuration;
-                timerFill.style.width = '100%';
-                timerInterval = setInterval(() => {
-                    timeRemaining--;
-                    timerFill.style.width = `${(timeRemaining / timerDuration) * 100}%`;
-                    if (timeRemaining <= 0) {
-                        handleIncorrect();
-                    }
-                }, 1000);
-            }
+        dropTargets.forEach(target => {
+            target.addEventListener('dragover', (e) => e.preventDefault());
+            target.addEventListener('dragenter', (e) => {
+                e.preventDefault();
+                target.classList.add('hovered');
+            });
+            target.addEventListener('dragleave', () => target.classList.remove('hovered'));
+            target.addEventListener('drop', (e) => {
+                e.preventDefault();
+                target.classList.remove('hovered');
+                const droppedType = e.dataTransfer.getData('text/plain');
+                const targetType = target.dataset.type;
 
-            function displayNext() {
-                if (currentKeywordIndex >= mnemonic.length) {
-                    clearInterval(timerInterval);
-                    snnoopDisplay.textContent = 'Challenge Complete!';
-                    keywordInput.disabled = true;
-                    checkCompletion3();
-                    return;
+                if (droppedType === targetType) {
+                    const cardsArea = target.querySelector('.cards-area');
+                    cardsArea.appendChild(dragItem);
+                    dragItem.classList.remove('incorrect');
+                    dragItem.classList.add('correct');
+                    dragItem.draggable = false;
+                    part1Score.correct++;
+                } else {
+                    itemContainer.appendChild(dragItem);
+                    dragItem.classList.add('incorrect');
+                    dragItem.classList.remove('correct');
+                    setTimeout(() => dragItem.classList.remove('incorrect'), 1000);
                 }
-                const currentItem = mnemonic[currentKeywordIndex];
-                snnoopDisplay.textContent = currentItem.letter;
-                snnoopHint.textContent = `Hint: ${currentItem.hint}`;
-                snnoopHint.classList.add('hidden');
-                keywordInput.value = '';
-                snnoopFeedback.textContent = '';
-                startTimer();
-                keywordInput.focus();
-            }
-
-            function handleCorrect() {
-                clearInterval(timerInterval);
-                snnoopFeedback.textContent = 'Correct!';
-                snnoopFeedback.classList.add('text-green-500');
-                activityScores.activity3.correct++;
-                saveState();
-                renderScoreboard();
-                currentKeywordIndex++;
-                setTimeout(displayNext, 1000);
-            }
-
-            function handleIncorrect() {
-                clearInterval(timerInterval);
-                snnoopFeedback.textContent = 'Incorrect or Time\'s up! Try again.';
-                snnoopFeedback.classList.add('text-red-500');
-                snnoopHint.classList.remove('hidden');
-                startTimer();
-            }
-
-            keywordInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    if (keywordInput.value.trim().toLowerCase() === mnemonic[currentKeywordIndex].keyword.toLowerCase()) {
-                        handleCorrect();
-                    } else {
-                        handleIncorrect();
-                    }
+                
+                // Update score display
+                document.querySelector('span').textContent = `Correct: ${part1Score.correct}/${part1Score.total}`;
+                
+                // Show continue button if all correct
+                if (part1Score.correct === part1Score.total) {
+                    document.getElementById('next-part-1').classList.remove('hidden');
                 }
             });
+        });
 
-            function checkCompletion3() {
-                if (!correctCodesEntered.activity3) {
-                    showModal('Activity 3 Complete!', `You recalled the full SNNOOP10 mnemonic! Your code is: <span class="font-bold text-lg">${activityCodes.activity3}</span>.`);
-                    correctCodesEntered.activity3 = true;
-                    enteredCodes.activity3 = activityCodes.activity3;
-                    updateCodeInputStates();
-                    saveState();
-                    nextButton.classList.remove('hidden');
-                }
+        document.getElementById('next-part-1').onclick = () => {
+            currentPart = 2;
+            renderPart2();
+        };
+    }
+
+    function renderPart2() {
+        let currentQuestion = 0;
+        let attempts = Array(step.parts.part2.questions.length).fill(0);
+
+        function renderQuestion() {
+            if (currentQuestion >= step.parts.part2.questions.length) {
+                part2Score.correct = step.parts.part2.questions.filter((q, idx) => attempts[idx] > 0).length;
+                renderPart3();
+                return;
             }
 
-            displayNext();
+            const question = step.parts.part2.questions[currentQuestion];
+            
+            contentArea.innerHTML = `
+                <section class="flex flex-col gap-4 max-w-3xl mx-auto">
+                    <h2 class="text-2xl font-bold text-gray-800">${step.title} - ${step.parts.part2.title}</h2>
+                    <p class="text-lg text-gray-700">${step.parts.part2.description}</p>
+                    
+                    <div class="bg-white p-6 rounded-lg shadow-md mt-4">
+                        <div class="text-sm text-gray-500 mb-2">Question ${currentQuestion + 1} of ${step.parts.part2.questions.length}</div>
+                        <h3 class="text-xl font-bold mb-4 text-gray-800">${question.question}</h3>
+                        
+                        <div class="flex gap-4 items-center">
+                            <input type="text" id="answer-input" class="flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Type your answer...">
+                            <button id="submit-answer" class="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold shadow-md hover:bg-blue-700 transition-colors">
+                                Submit
+                            </button>
+                        </div>
+                        
+                        <div id="answer-feedback" class="mt-4 text-center font-semibold"></div>
+                        <div id="answer-hint" class="mt-2 text-sm text-gray-500 text-center hidden">${question.hint}</div>
+                        
+                        <div class="mt-6 flex justify-between items-center">
+                            <span class="text-sm text-gray-600">Progress: ${currentQuestion}/${step.parts.part2.questions.length}</span>
+                            <button id="skip-question" class="px-4 py-2 bg-gray-500 text-white rounded-lg font-semibold hover:bg-gray-600 transition-colors">
+                                Skip
+                            </button>
+                        </div>
+                    </div>
+                </section>
+            `;
+
+            const answerInput = document.getElementById('answer-input');
+            const submitButton = document.getElementById('submit-answer');
+            const feedbackDiv = document.getElementById('answer-feedback');
+            const hintDiv = document.getElementById('answer-hint');
+            const skipButton = document.getElementById('skip-question');
+
+            submitButton.onclick = checkAnswer;
+            answerInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') checkAnswer();
+            });
+
+            skipButton.onclick = () => {
+                currentQuestion++;
+                renderQuestion();
+            };
+
+            function checkAnswer() {
+                const userAnswer = answerInput.value.trim().toLowerCase();
+                const correctAnswer = question.answer.toLowerCase();
+                attempts[currentQuestion]++;
+
+                if (userAnswer === correctAnswer) {
+                    feedbackDiv.textContent = 'Correct!';
+                    feedbackDiv.className = 'mt-4 text-center font-semibold text-green-600';
+                    setTimeout(() => {
+                        currentQuestion++;
+                        renderQuestion();
+                    }, 1000);
+                } else {
+                    feedbackDiv.textContent = 'Incorrect. Try again!';
+                    feedbackDiv.className = 'mt-4 text-center font-semibold text-red-600';
+                    hintDiv.classList.remove('hidden');
+                }
+                answerInput.focus();
+            }
+
+            answerInput.focus();
         }
+
+        renderQuestion();
+    }
+
+    function renderPart3() {
+        let currentQuestion = 0;
+
+        function renderQuestion() {
+            if (currentQuestion >= step.parts.part3.questions.length) {
+                checkActivity3Completion();
+                return;
+            }
+
+            const question = step.parts.part3.questions[currentQuestion];
+            const isAttempted = part3Attempted[currentQuestion];
+            
+            contentArea.innerHTML = `
+                <section class="flex flex-col gap-4 max-w-3xl mx-auto">
+                    <h2 class="text-2xl font-bold text-gray-800">${step.title} - ${step.parts.part3.title}</h2>
+                    <p class="text-lg text-gray-700">${step.parts.part3.description}</p>
+                    
+                    <div class="bg-white p-6 rounded-lg shadow-md mt-4">
+                        <div class="text-sm text-gray-500 mb-2">Question ${currentQuestion + 1} of ${step.parts.part3.questions.length}</div>
+                        <h3 class="text-xl font-bold mb-6 text-gray-800">${question.question}</h3>
+                        
+                        <div class="flex gap-4 justify-center mb-6">
+                            <button id="true-btn" class="px-8 py-4 bg-green-500 text-white rounded-lg font-semibold shadow-md hover:bg-green-600 transition-colors ${isAttempted ? 'opacity-50 cursor-not-allowed' : ''}" ${isAttempted ? 'disabled' : ''}>
+                                True
+                            </button>
+                            <button id="false-btn" class="px-8 py-4 bg-red-500 text-white rounded-lg font-semibold shadow-md hover:bg-red-600 transition-colors ${isAttempted ? 'opacity-50 cursor-not-allowed' : ''}" ${isAttempted ? 'disabled' : ''}>
+                                False
+                            </button>
+                        </div>
+                        
+                        <div id="tf-feedback" class="mt-4 text-center font-semibold"></div>
+                        
+                        <div class="mt-6 flex justify-between items-center">
+                            <span class="text-sm text-gray-600">Score: ${part3Score.correct}/${step.parts.part3.questions.length}</span>
+                            <button id="next-tf" class="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold shadow-md hover:bg-blue-700 transition-colors ${isAttempted ? '' : 'hidden'}">
+                                Next Question
+                            </button>
+                        </div>
+                    </div>
+                </section>
+            `;
+
+            const trueBtn = document.getElementById('true-btn');
+            const falseBtn = document.getElementById('false-btn');
+            const feedbackDiv = document.getElementById('tf-feedback');
+            const nextBtn = document.getElementById('next-tf');
+
+            function handleAnswer(userAnswer) {
+                if (part3Attempted[currentQuestion]) return;
+                
+                part3Attempted[currentQuestion] = true;
+                const isCorrect = (userAnswer === question.answer);
+                
+                if (isCorrect) {
+                    feedbackDiv.textContent = `Correct! ${question.explanation}`;
+                    feedbackDiv.className = 'mt-4 text-center font-semibold text-green-600';
+                    part3Score.correct++;
+                } else {
+                    feedbackDiv.textContent = `Incorrect. ${question.explanation}`;
+                    feedbackDiv.className = 'mt-4 text-center font-semibold text-red-600';
+                }
+                
+                trueBtn.disabled = true;
+                falseBtn.disabled = true;
+                trueBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                falseBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                nextBtn.classList.remove('hidden');
+                
+                document.querySelector('span').textContent = `Score: ${part3Score.correct}/${step.parts.part3.questions.length}`;
+            }
+
+            trueBtn.onclick = () => handleAnswer(true);
+            falseBtn.onclick = () => handleAnswer(false);
+            nextBtn.onclick = () => {
+                currentQuestion++;
+                renderQuestion();
+            };
+        }
+
+        renderQuestion();
+    }
+
+    function checkActivity3Completion() {
+        activityScores.activity3.correct = part1Score.correct + part2Score.correct + part3Score.correct;
+        activityScores.activity3.total = part1Score.total + part2Score.total + part3Score.total;
+        
+        if (!correctCodesEntered.activity3) {
+            showModal('Activity 3 Complete!', `You completed all three parts! Your code is: <span class="font-bold text-lg">${activityCodes.activity3}</span>.`);
+            correctCodesEntered.activity3 = true;
+            enteredCodes.activity3 = activityCodes.activity3;
+            updateCodeInputStates();
+            saveState();
+            nextButton.classList.remove('hidden');
+        }
+    }
+
+    // Start with part 1
+    renderPart1();
+}
         
         function renderConclusionStep(step) {
             contentArea.innerHTML = `
@@ -1287,6 +1739,176 @@
                         }, 1500);
                     } else {
                         feedbackDiv.textContent = `You got ${correctCount} out of 5 correct. Please review the video and try again.`;
+                        feedbackDiv.className = 'mt-4 text-center font-semibold text-red-600';
+                        feedbackDiv.classList.remove('hidden');
+                    }
+                };
+            }
+
+            // NEW PAGES HANDLING
+            if (step.type === 'hannah-decision-point-1') {
+                // No validation needed - proceed regardless of selection
+                const feedbackDiv = document.getElementById('hannah-dx-feedback');
+                feedbackDiv.textContent = 'Selection recorded. Proceeding to physical assessment...';
+                feedbackDiv.className = 'mt-4 text-center font-semibold text-blue-600';
+                feedbackDiv.classList.remove('hidden');
+                
+                // Auto-proceed after a short delay
+                setTimeout(() => {
+                    currentSecondPatientStep++;
+                    saveState();
+                    renderStep();
+                }, 2000);
+            }
+
+            if (step.type === 'hannah-decision-point-2') {
+                nextButton.classList.add('hidden');
+                const submitButton = document.getElementById('submit-order');
+                const orderInput = document.getElementById('order-input');
+                const feedbackDiv = document.getElementById('order-feedback');
+                
+                submitButton.onclick = () => {
+                    const userAnswer = orderInput.value.trim();
+                    if (userAnswer === '4132') {
+                        feedbackDiv.textContent = 'Correct! The order is 4 (Migraine), 1 (Medication overuse), 3 (Tension), 2 (Cluster).';
+                        feedbackDiv.className = 'mt-4 text-center font-semibold text-green-600';
+                        feedbackDiv.classList.remove('hidden');
+                        
+                        setTimeout(() => {
+                            currentSecondPatientStep++;
+                            saveState();
+                            renderStep();
+                        }, 2000);
+                    } else {
+                        feedbackDiv.textContent = 'Incorrect order. Please try again.';
+                        feedbackDiv.className = 'mt-4 text-center font-semibold text-red-600';
+                        feedbackDiv.classList.remove('hidden');
+                    }
+                };
+
+                // Allow Enter key submission
+                orderInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        submitButton.click();
+                    }
+                });
+            }
+
+            // Quiz question handlers
+            if (step.type === 'hannah-quiz-1') {
+                nextButton.classList.add('hidden');
+                const submitButton = document.getElementById('submit-quiz1');
+                const feedbackDiv = document.getElementById('quiz1-feedback');
+                
+                submitButton.onclick = () => {
+                    const selectedAnswer = document.querySelector('input[name="quiz1"]:checked');
+                    if (!selectedAnswer) {
+                        showModal('Please select an answer', 'You must choose an option to proceed.');
+                        return;
+                    }
+
+                    if (selectedAnswer.value === 'A') {
+                        feedbackDiv.textContent = 'Correct! This accurately describes the pertinent findings for migraine with aura.';
+                        feedbackDiv.className = 'mt-4 text-center font-semibold text-green-600';
+                        feedbackDiv.classList.remove('hidden');
+                        
+                        setTimeout(() => {
+                            currentSecondPatientStep++;
+                            saveState();
+                            renderStep();
+                        }, 2000);
+                    } else {
+                        feedbackDiv.textContent = 'Incorrect. Please review the case details and try again.';
+                        feedbackDiv.className = 'mt-4 text-center font-semibold text-red-600';
+                        feedbackDiv.classList.remove('hidden');
+                    }
+                };
+            }
+
+            if (step.type === 'hannah-quiz-2') {
+                nextButton.classList.add('hidden');
+                const submitButton = document.getElementById('submit-quiz2');
+                const feedbackDiv = document.getElementById('quiz2-feedback');
+                
+                submitButton.onclick = () => {
+                    const selectedAnswer = document.querySelector('input[name="quiz2"]:checked');
+                    if (!selectedAnswer) {
+                        showModal('Please select an answer', 'You must choose an option to proceed.');
+                        return;
+                    }
+
+                    if (selectedAnswer.value === 'B') {
+                        feedbackDiv.textContent = 'Correct! This accurately describes medication overuse headache.';
+                        feedbackDiv.className = 'mt-4 text-center font-semibold text-green-600';
+                        feedbackDiv.classList.remove('hidden');
+                        
+                        setTimeout(() => {
+                            currentSecondPatientStep++;
+                            saveState();
+                            renderStep();
+                        }, 2000);
+                    } else {
+                        feedbackDiv.textContent = 'Incorrect. Please review the case details and try again.';
+                        feedbackDiv.className = 'mt-4 text-center font-semibold text-red-600';
+                        feedbackDiv.classList.remove('hidden');
+                    }
+                };
+            }
+
+            if (step.type === 'hannah-quiz-3') {
+                nextButton.classList.add('hidden');
+                const submitButton = document.getElementById('submit-quiz3');
+                const feedbackDiv = document.getElementById('quiz3-feedback');
+                
+                submitButton.onclick = () => {
+                    const selectedAnswer = document.querySelector('input[name="quiz3"]:checked');
+                    if (!selectedAnswer) {
+                        showModal('Please select an answer', 'You must choose an option to proceed.');
+                        return;
+                    }
+
+                    if (selectedAnswer.value === 'B') {
+                        feedbackDiv.textContent = 'Correct! This accurately describes tension-type headaches.';
+                        feedbackDiv.className = 'mt-4 text-center font-semibold text-green-600';
+                        feedbackDiv.classList.remove('hidden');
+                        
+                        setTimeout(() => {
+                            currentSecondPatientStep++;
+                            saveState();
+                            renderStep();
+                        }, 2000);
+                    } else {
+                        feedbackDiv.textContent = 'Incorrect. Please review the case details and try again.';
+                        feedbackDiv.className = 'mt-4 text-center font-semibold text-red-600';
+                        feedbackDiv.classList.remove('hidden');
+                    }
+                };
+            }
+
+            if (step.type === 'hannah-quiz-4') {
+                nextButton.classList.add('hidden');
+                const submitButton = document.getElementById('submit-quiz4');
+                const feedbackDiv = document.getElementById('quiz4-feedback');
+                
+                submitButton.onclick = () => {
+                    const selectedAnswer = document.querySelector('input[name="quiz4"]:checked');
+                    if (!selectedAnswer) {
+                        showModal('Please select an answer', 'You must choose an option to proceed.');
+                        return;
+                    }
+
+                    if (selectedAnswer.value === 'D') {
+                        feedbackDiv.textContent = 'Correct! This accurately describes cluster headaches.';
+                        feedbackDiv.className = 'mt-4 text-center font-semibold text-green-600';
+                        feedbackDiv.classList.remove('hidden');
+                        
+                        setTimeout(() => {
+                            currentSecondPatientStep++;
+                            saveState();
+                            renderStep();
+                        }, 2000);
+                    } else {
+                        feedbackDiv.textContent = 'Incorrect. Please review the case details and try again.';
                         feedbackDiv.className = 'mt-4 text-center font-semibold text-red-600';
                         feedbackDiv.classList.remove('hidden');
                     }
