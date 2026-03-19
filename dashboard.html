@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instructor Dashboard — Nursing Escape Room</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+        .mistake-row:hover { background: rgba(255,255,255,0.04); }
+        details summary { cursor: pointer; }
+        details summary::-webkit-details-marker { display: none; }
+        .tab-btn.active { background: #1d4ed8; color: white; }
+        @media print { .no-print { display: none !important; } body { background: white; color: black; } }
+    </style>
+</head>
+<body class="p-6">
+
+    <!-- Password gate -->
+    <div id="password-gate" class="flex items-center justify-center min-h-screen">
+        <div class="bg-slate-800 border border-slate-600 rounded-2xl p-10 w-full max-w-md text-center">
+            <i class="fas fa-lock text-blue-400 text-4xl mb-4"></i>
+            <h2 class="text-white text-2xl font-bold mb-2">Instructor Dashboard</h2>
+            <p class="text-slate-400 text-sm mb-6">Enter your credentials to continue.</p>
+
+            <div class="text-left mb-4">
+                <label class="text-slate-400 text-xs uppercase tracking-wide font-bold block mb-1">Google Sheets Script URL</label>
+                <input type="url" id="sheets-url-input"
+                    class="w-full px-3 py-2 bg-slate-700 border border-slate-500 text-white rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 mb-1"
+                    placeholder="https://script.google.com/macros/s/YOUR_ID/exec">
+                <p class="text-slate-600 text-xs">Leave blank to use local browser data only.</p>
+            </div>
+
+            <input type="password" id="pwd-input" class="w-full px-4 py-3 bg-slate-700 border border-slate-500 text-white rounded-xl mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Password">
+            <button id="pwd-btn" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold transition-colors">Enter Dashboard</button>
+            <p id="pwd-error" class="text-red-400 text-sm mt-3 hidden">Incorrect password.</p>
+            <p class="text-slate-600 text-xs mt-4">Default password: <code>instructor2025</code></p>
+        </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div id="dashboard" class="hidden max-w-7xl mx-auto">
+
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-8">
+            <div>
+                <h1 class="text-3xl font-extrabold text-white">Instructor Dashboard</h1>
+                <p class="text-slate-400 mt-1">Nursing Escape Room — Student Performance Overview</p>
+            </div>
+            <div class="flex gap-3 no-print">
+                <button id="refresh-btn" class="px-4 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600 transition-colors text-sm">
+                    <i class="fas fa-sync-alt mr-1"></i> Refresh
+                </button>
+                <button id="export-btn" class="px-4 py-2 bg-emerald-700 text-white rounded-lg hover:bg-emerald-600 transition-colors text-sm">
+                    <i class="fas fa-download mr-1"></i> Export JSON
+                </button>
+                <button onclick="window.print()" class="px-4 py-2 bg-blue-700 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm">
+                    <i class="fas fa-print mr-1"></i> Print
+                </button>
+            </div>
+        </div>
+
+        <!-- Summary Stats -->
+        <div id="summary-stats" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8"></div>
+
+        <!-- View Tabs -->
+        <div class="flex gap-2 mb-6 no-print">
+            <button class="tab-btn active px-4 py-2 rounded-lg text-sm font-semibold bg-slate-700 text-slate-300 transition-colors" data-tab="students">By Student</button>
+            <button class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold bg-slate-700 text-slate-300 transition-colors" data-tab="cases">By Case</button>
+            <button class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold bg-slate-700 text-slate-300 transition-colors" data-tab="mistakes">Mistakes Summary</button>
+        </div>
+
+        <!-- Tab: By Student -->
+        <div id="tab-students" class="tab-content">
+            <div id="student-list" class="space-y-4"></div>
+        </div>
+
+        <!-- Tab: By Case -->
+        <div id="tab-cases" class="tab-content hidden">
+            <div id="case-breakdown" class="space-y-6"></div>
+        </div>
+
+        <!-- Tab: Mistakes Summary -->
+        <div id="tab-mistakes" class="tab-content hidden">
+            <div id="mistakes-summary" class="space-y-6"></div>
+        </div>
+
+        <p id="no-data" class="text-center text-slate-500 py-20 text-lg hidden">
+            <i class="fas fa-inbox text-4xl block mb-3"></i>
+            No student data found. Students must open cases from the same browser/device.
+        </p>
+    </div>
+
+    <script>
+        const NER_PREFIX = 'ner_';
+        const INSTRUCTOR_PASSWORD = 'instructor2025';
+        let SHEETS_URL = localStorage.getItem('ner_sheets_url') || 'https://script.google.com/macros/s/AKfycby1Tyf3MrFinkXFWqa-XXcBYzUFafB4etj3lH2QanK-K_cZCeAy1pMS2uWH5H2CivX_Ew/exec';
+
+        // --- Password Gate ---
+        document.getElementById('pwd-btn').onclick = () => {
+            if (document.getElementById('pwd-input').value === INSTRUCTOR_PASSWORD) {
+                // Save Sheets URL if provided
+                const urlInput = document.getElementById('sheets-url-input').value.trim();
+                if (urlInput) {
+                    SHEETS_URL = urlInput;
+                    localStorage.setItem('ner_sheets_url', urlInput);
+                }
+                document.getElementById('password-gate').classList.add('hidden');
+                document.getElementById('dashboard').classList.remove('hidden');
+                loadDashboard();
+            } else {
+                document.getElementById('pwd-error').classList.remove('hidden');
+            }
+        };
+        document.getElementById('pwd-input').addEventListener('keypress', e => {
+            if (e.key === 'Enter') document.getElementById('pwd-btn').click();
+        });
+
+        // Pre-fill saved URL
+        if (localStorage.getItem('ner_sheets_url')) {
+            document.getElementById('sheets-url-input').value = localStorage.getItem('ner_sheets_url');
+        }
+
+        // --- Tabs ---
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.onclick = () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active','bg-blue-700','text-white'));
+                document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+                btn.classList.add('active');
+                document.getElementById(`tab-${btn.dataset.tab}`).classList.remove('hidden');
+            };
+        });
+
+        document.getElementById('refresh-btn').onclick = loadDashboard;
+        document.getElementById('export-btn').onclick = exportJSON;
+
+        function formatTime(seconds) {
+            if (!seconds && seconds !== 0) return '—';
+            const m = Math.floor(seconds / 60), s = seconds % 60;
+            return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+        }
+
+        // Fetch from Google Sheets if URL is set, otherwise fall back to localStorage
+        async function getAllStudentData() {
+            if (SHEETS_URL) {
+                try {
+                    const res = await fetch(`${SHEETS_URL}?action=getAllData`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data && typeof data === 'object' && !data.status) return data;
+                    }
+                } catch(e) {
+                    console.warn('Sheets fetch failed, falling back to localStorage:', e);
+                }
+            }
+            // localStorage fallback
+            const results = {};
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (!key || !key.startsWith(NER_PREFIX)) continue;
+                const withoutPrefix = key.replace(NER_PREFIX, '');
+                const knownCases = ['anna', 'tyler', 'hannah'];
+                const caseId = knownCases.find(c => withoutPrefix.endsWith(`_${c}`));
+                if (!caseId) continue;
+                const studentName = withoutPrefix.slice(0, -(caseId.length + 1));
+                if (!studentName) continue;
+                try {
+                    const data = JSON.parse(localStorage.getItem(key));
+                    if (!results[studentName]) results[studentName] = {};
+                    results[studentName][caseId] = data;
+                } catch(e) {}
+            }
+            return results;
+        }
+
+        async function exportJSON() {
+            const data = await getAllStudentData();
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `nursing-escape-room-results-${new Date().toISOString().slice(0,10)}.json`;
+            a.click();
+        }
+
+        function scoreColor(pct) {
+            if (pct >= 80) return 'text-green-400';
+            if (pct >= 60) return 'text-yellow-400';
+            return 'text-red-400';
+        }
+
+        function caseLabel(id) {
+            return { anna: 'Anna Jacobs', tyler: 'Tyler Haley', hannah: 'Hannah Howard' }[id] || id;
+        }
+        function caseBadgeClass(id) {
+            return { anna: 'bg-emerald-500/20 text-emerald-300', tyler: 'bg-blue-500/20 text-blue-300', hannah: 'bg-purple-500/20 text-purple-300' }[id] || '';
+        }
+
+        function renderMistakesForCase(caseData, caseId) {
+            if (!caseData) return '<p class="text-slate-500 text-sm italic">No data</p>';
+            const rows = [];
+
+            // Support both Google Sheets format (flat mistakes[]) and localStorage format (separate log arrays)
+            const allMistakes = [];
+
+            if (caseData.mistakes && Array.isArray(caseData.mistakes)) {
+                // Sheets format — already flattened
+                caseData.mistakes.forEach(m => allMistakes.push(m));
+            } else {
+                // localStorage format — extract from individual log arrays
+                const logMap = [
+                    { key: 'activity1Log',      topic: 'Activity 1 — Headache Classification' },
+                    { key: 'activity2Log',       topic: 'Activity 2 — Red Flag MCQs' },
+                    { key: 'activity3Part1Log',  topic: 'Activity 3 Pt1 — Red/Green Flag Sort' },
+                    { key: 'activity3Part2Log',  topic: 'Activity 3 Pt2 — SNNOOP10 Fill-in' },
+                    { key: 'activity3Part3Log',  topic: 'Activity 3 Pt3 — True/False' },
+                    { key: 'decisionMistakes',   topic: 'Decision Points' }
+                ];
+                logMap.forEach(({ key, topic }) => {
+                    if (!caseData[key]) return;
+                    caseData[key].filter(l => !l.wasCorrect).forEach(l => {
+                        allMistakes.push({
+                            topic,
+                            question:    l.question || l.name || '',
+                            given:       l.chosen || l.given || l.placedType || '',
+                            correct:     l.correct || l.correctType || '',
+                            explanation: l.explanation || ''
+                        });
+                    });
+                });
+            }
+
+            if (allMistakes.length === 0) return '<p class="text-emerald-400 text-sm italic py-2">✅ No mistakes recorded for this case.</p>';
+
+            allMistakes.forEach(m => {
+                rows.push(`<div class="mistake-row px-4 py-3 rounded-lg border border-red-900/30 bg-red-950/20 mb-2">
+                    <div class="flex items-start gap-3">
+                        <span class="text-red-400 text-sm mt-0.5">❌</span>
+                        <div>
+                            <p class="text-slate-300 text-xs font-bold uppercase tracking-wide mb-1">${m.topic}</p>
+                            <p class="text-slate-200 text-sm font-semibold">${m.question}</p>
+                            <p class="text-red-300 text-xs mt-0.5">Answered: <strong>${m.given}</strong> — Correct: <strong>${m.correct}</strong></p>
+                            ${m.explanation ? `<p class="text-slate-400 text-xs mt-1 italic">💡 ${m.explanation}</p>` : ''}
+                        </div>
+                    </div>
+                </div>`);
+            });
+
+            return rows.join('');
+        }
+
+        async function loadDashboard() {
+            // Show loading state
+            document.getElementById('summary-stats').innerHTML = `
+                <div class="col-span-4 text-center py-6 text-slate-400">
+                    <i class="fas fa-spinner fa-spin text-2xl mb-2 block"></i>
+                    ${SHEETS_URL ? 'Fetching data from Google Sheets...' : 'Loading local data...'}
+                </div>`;
+
+            const allData = await getAllStudentData();
+            const students = Object.keys(allData);
+
+            // Summary stats
+            document.getElementById('summary-stats').innerHTML = `
+                <div class="bg-slate-800 border border-slate-600 rounded-xl p-5">
+                    <p class="text-slate-400 text-sm">Total Students</p>
+                    <p class="text-white text-3xl font-bold mt-1">${students.length}</p>
+                </div>
+                <div class="bg-slate-800 border border-slate-600 rounded-xl p-5">
+                    <p class="text-slate-400 text-sm">Cases Completed</p>
+                    <p class="text-white text-3xl font-bold mt-1">${students.reduce((sum, s) => sum + Object.values(allData[s]).filter(c => c.completed).length, 0)}</p>
+                </div>
+                <div class="bg-slate-800 border border-slate-600 rounded-xl p-5">
+                    <p class="text-slate-400 text-sm">Avg. Anna Time</p>
+                    <p class="text-white text-3xl font-bold mt-1">${(() => { const times = students.map(s => allData[s].anna?.caseTime).filter(Boolean); return times.length ? formatTime(Math.round(times.reduce((a,b)=>a+b,0)/times.length)) : '—'; })()}</p>
+                </div>
+                <div class="bg-slate-800 border border-slate-600 rounded-xl p-5">
+                    <p class="text-slate-400 text-sm">Avg. Tyler Time</p>
+                    <p class="text-white text-3xl font-bold mt-1">${(() => { const times = students.map(s => allData[s].tyler?.caseTime).filter(Boolean); return times.length ? formatTime(Math.round(times.reduce((a,b)=>a+b,0)/times.length)) : '—'; })()}</p>
+                </div>
+            `;
+
+            if (students.length === 0) {
+                document.getElementById('no-data').classList.remove('hidden');
+                return;
+            }
+            document.getElementById('no-data').classList.add('hidden');
+
+            // --- Tab: By Student ---
+            document.getElementById('student-list').innerHTML = students.sort().map(student => {
+                const cases = allData[student];
+                const caseRows = ['anna','tyler','hannah'].map(cId => {
+                    const c = cases[cId];
+                    if (!c) return `<div class="flex items-center justify-between py-2 border-b border-slate-700/50"><span class="text-slate-400 text-sm">${caseLabel(cId)}</span><span class="text-slate-600 text-xs">Not started</span></div>`;
+                    const score = c.totalScore ? `${c.totalScore.correct}/${c.totalScore.total}` : '—';
+                    const pct = c.totalScore?.total ? Math.round(c.totalScore.correct / c.totalScore.total * 100) : null;
+                    return `<div class="flex items-center justify-between py-2 border-b border-slate-700/50">
+                        <span class="text-slate-300 text-sm font-medium">${caseLabel(cId)}</span>
+                        <div class="flex items-center gap-4 text-right">
+                            <span class="text-slate-400 text-xs"><i class="fas fa-clock mr-1"></i>${formatTime(c.caseTime)}</span>
+                            ${pct !== null ? `<span class="${scoreColor(pct)} text-sm font-bold">${score} (${pct}%)</span>` : '<span class="text-slate-500 text-xs">—</span>'}
+                            <span class="${c.completed ? 'text-green-400' : 'text-yellow-400'} text-xs">${c.completed ? '✓ Done' : '⏳ In progress'}</span>
+                        </div>
+                    </div>`;
+                }).join('');
+
+                const totalMistakes = ['anna','tyler','hannah'].reduce((sum, cId) => {
+                    const c = cases[cId];
+                    if (!c) return sum;
+                    return sum +
+                        (c.activity1Log?.filter(l => !l.wasCorrect).length || 0) +
+                        (c.activity2Log?.filter(l => !l.wasCorrect).length || 0) +
+                        (c.activity3Part1Log?.filter(l => !l.wasCorrect).length || 0) +
+                        (c.activity3Part2Log?.filter(l => !l.wasCorrect).length || 0) +
+                        (c.activity3Part3Log?.filter(l => !l.wasCorrect).length || 0) +
+                        (c.decisionMistakes?.length || 0);
+                }, 0);
+
+                return `
+                    <details class="bg-slate-800 border border-slate-600 rounded-xl overflow-hidden">
+                        <summary class="flex items-center justify-between p-5 hover:bg-slate-750 transition-colors">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-blue-600/30 rounded-full flex items-center justify-center text-blue-300 font-bold text-lg">
+                                    ${student.charAt(0).toUpperCase()}
+                                </div>
+                                <div>
+                                    <p class="text-white font-bold">${student}</p>
+                                    <p class="text-slate-400 text-xs">${totalMistakes} mistake${totalMistakes !== 1 ? 's' : ''} across all cases</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-4 text-right">
+                                <div class="hidden md:block text-right">
+                                    <p class="text-slate-400 text-xs">Cases done</p>
+                                    <p class="text-white font-bold">${Object.values(cases).filter(c => c.completed).length} / 3</p>
+                                </div>
+                                <i class="fas fa-chevron-down text-slate-400 transition-transform"></i>
+                            </div>
+                        </summary>
+                        <div class="px-5 pb-5">
+                            <div class="mb-4">${caseRows}</div>
+                            <h4 class="text-slate-300 font-bold text-sm mb-3 uppercase tracking-wide">Mistakes by Case</h4>
+                            ${['anna','tyler','hannah'].map(cId => `
+                                <details class="mb-3">
+                                    <summary class="flex items-center gap-2 text-sm font-semibold text-slate-300 mb-2 hover:text-white">
+                                        <span class="px-2 py-0.5 rounded text-xs ${caseBadgeClass(cId)}">${caseLabel(cId)}</span>
+                                        <i class="fas fa-chevron-right text-xs text-slate-500"></i>
+                                    </summary>
+                                    <div class="space-y-2 mt-2">${renderMistakesForCase(cases[cId], cId)}</div>
+                                </details>
+                            `).join('')}
+                        </div>
+                    </details>
+                `;
+            }).join('');
+
+            // --- Tab: By Case ---
+            document.getElementById('case-breakdown').innerHTML = ['anna','tyler','hannah'].map(cId => {
+                const studentsWithCase = students.filter(s => allData[s][cId]);
+                if (studentsWithCase.length === 0) return `
+                    <div class="bg-slate-800 border border-slate-600 rounded-xl p-6">
+                        <div class="flex items-center gap-3 mb-2"><span class="px-3 py-1 rounded-full text-sm font-bold ${caseBadgeClass(cId)}">${caseLabel(cId)}</span></div>
+                        <p class="text-slate-500 text-sm italic">No student data yet.</p>
+                    </div>`;
+
+                const rows = studentsWithCase.sort().map(s => {
+                    const c = allData[s][cId];
+                    const score = c.totalScore ? `${c.totalScore.correct}/${c.totalScore.total}` : '—';
+                    const pct = c.totalScore?.total ? Math.round(c.totalScore.correct / c.totalScore.total * 100) : null;
+                    const mistakes = (c.activity1Log?.filter(l=>!l.wasCorrect).length||0) +
+                        (c.activity2Log?.filter(l=>!l.wasCorrect).length||0) +
+                        (c.activity3Part1Log?.filter(l=>!l.wasCorrect).length||0) +
+                        (c.activity3Part2Log?.filter(l=>!l.wasCorrect).length||0) +
+                        (c.activity3Part3Log?.filter(l=>!l.wasCorrect).length||0) +
+                        (c.decisionMistakes?.length||0);
+                    return `<tr class="border-b border-slate-700/50 hover:bg-slate-700/30">
+                        <td class="py-3 px-4 text-slate-200 font-medium">${s}</td>
+                        <td class="py-3 px-4 text-center text-slate-300">${formatTime(c.caseTime)}</td>
+                        <td class="py-3 px-4 text-center ${pct !== null ? scoreColor(pct) : 'text-slate-500'} font-bold">${pct !== null ? `${score} (${pct}%)` : '—'}</td>
+                        <td class="py-3 px-4 text-center text-red-400">${mistakes}</td>
+                        <td class="py-3 px-4 text-center ${c.completed ? 'text-green-400' : 'text-yellow-400'}">${c.completed ? 'Complete' : 'In progress'}</td>
+                    </tr>`;
+                }).join('');
+
+                return `
+                    <div class="bg-slate-800 border border-slate-600 rounded-xl overflow-hidden">
+                        <div class="flex items-center gap-3 p-5 border-b border-slate-700">
+                            <span class="px-3 py-1 rounded-full text-sm font-bold ${caseBadgeClass(cId)}">${caseLabel(cId)}</span>
+                            <span class="text-slate-400 text-sm">${studentsWithCase.length} student${studentsWithCase.length !== 1 ? 's' : ''}</span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead><tr class="text-slate-400 text-xs uppercase tracking-wide border-b border-slate-700">
+                                    <th class="text-left py-3 px-4">Student</th>
+                                    <th class="py-3 px-4">Time</th>
+                                    <th class="py-3 px-4">Score</th>
+                                    <th class="py-3 px-4">Mistakes</th>
+                                    <th class="py-3 px-4">Status</th>
+                                </tr></thead>
+                                <tbody>${rows}</tbody>
+                            </table>
+                        </div>
+                    </div>`;
+            }).join('');
+
+            // --- Tab: Mistakes Summary (aggregated by topic/question) ---
+            // Build frequency map: question text -> {count, students[]}
+            const mistakeFreq = {};
+            students.forEach(student => {
+                ['anna','tyler','hannah'].forEach(cId => {
+                    const c = allData[student][cId];
+                    if (!c) return;
+                    const logSets = [
+                        { log: c.activity1Log, topic: 'Activity 1 — Headache Classification' },
+                        { log: c.activity2Log, topic: 'Activity 2 — Red Flag MCQs' },
+                        { log: c.activity3Part1Log, topic: 'Activity 3 Pt1 — Red/Green Flag Sort' },
+                        { log: c.activity3Part2Log, topic: 'Activity 3 Pt2 — SNNOOP10 Fill-in' },
+                        { log: c.activity3Part3Log, topic: 'Activity 3 Pt3 — True/False' },
+                        { log: c.decisionMistakes, topic: 'Decision Points' }
+                    ];
+                    logSets.forEach(({ log, topic }) => {
+                        if (!log) return;
+                        log.filter(l => !l.wasCorrect).forEach(l => {
+                            const key = `${topic}|${l.question || l.name || ''}`;
+                            if (!mistakeFreq[key]) mistakeFreq[key] = { topic, question: l.question || l.name || '', correct: l.correct || l.correctType || '', students: [], explanation: l.explanation || '' };
+                            if (!mistakeFreq[key].students.includes(student)) mistakeFreq[key].students.push(student);
+                        });
+                    });
+                });
+            });
+
+            // Group by topic
+            const byTopic = {};
+            Object.values(mistakeFreq).forEach(m => {
+                if (!byTopic[m.topic]) byTopic[m.topic] = [];
+                byTopic[m.topic].push(m);
+            });
+
+            document.getElementById('mistakes-summary').innerHTML = Object.keys(byTopic).length === 0
+                ? '<p class="text-slate-500 text-sm italic text-center py-10">No mistake data available yet.</p>'
+                : Object.entries(byTopic).sort(([a],[b]) => a.localeCompare(b)).map(([topic, mistakes]) => `
+                    <div class="bg-slate-800 border border-slate-600 rounded-xl overflow-hidden">
+                        <div class="p-5 border-b border-slate-700 flex items-center justify-between">
+                            <h3 class="text-white font-bold">${topic}</h3>
+                            <span class="text-slate-400 text-sm">${mistakes.reduce((s,m)=>s+m.students.length,0)} total errors across ${mistakes.length} question${mistakes.length!==1?'s':''}</span>
+                        </div>
+                        <div class="divide-y divide-slate-700/50">
+                            ${mistakes.sort((a,b) => b.students.length - a.students.length).map(m => `
+                                <div class="p-4">
+                                    <div class="flex items-start justify-between gap-4">
+                                        <div class="flex-1">
+                                            <p class="text-slate-200 text-sm font-semibold">${m.question}</p>
+                                            <p class="text-emerald-400 text-xs mt-1">Correct answer: <strong>${m.correct}</strong></p>
+                                            ${m.explanation ? `<p class="text-slate-400 text-xs mt-1 italic">${m.explanation}</p>` : ''}
+                                            <p class="text-slate-500 text-xs mt-2">Made by: ${m.students.join(', ')}</p>
+                                        </div>
+                                        <div class="text-center bg-red-950/40 border border-red-900/30 rounded-lg px-3 py-2 min-w-[60px]">
+                                            <p class="text-red-400 text-xl font-bold">${m.students.length}</p>
+                                            <p class="text-red-500 text-xs">student${m.students.length!==1?'s':''}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `).join('');
+        }
+    </script>
+</body>
+</html>
