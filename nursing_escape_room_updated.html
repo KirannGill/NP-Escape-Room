@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nursing Escape Room</title>
+    <title>TRU MN-NP Program Escape Room</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
@@ -115,6 +115,11 @@
         .review-card { border-left: 4px solid #3b82f6; }
         .review-card.correct-review { border-left-color: #10b981; background: #f0fdf4; }
         .review-card.incorrect-review { border-left-color: #ef4444; background: #fef2f2; }
+        @keyframes codePulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(245,158,11,0.7); }
+            50% { box-shadow: 0 0 0 12px rgba(245,158,11,0); }
+        }
+        .code-banner { animation: codePulse 1.8s ease-in-out 3; }
     </style>
 </head>
 <body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
@@ -138,13 +143,10 @@
 
     <div id="main-container" class="main-container relative">
         <header class="text-center mb-6">
-            <h1 class="text-4xl md:text-5xl font-extrabold text-gray-800 tracking-tight">Nursing Escape Room: The Headache Scenario</h1>
+            <h1 class="text-4xl md:text-5xl font-extrabold text-gray-800 tracking-tight">Headache Case 1: Anna Jacobs</h1>
             <p id="room-subtitle" class="text-gray-600 mt-2">Welcome, aspiring healthcare hero! Can you crack the codes and escape?</p>
         </header>
 
-        <button id="code-panel-toggle" class="fixed top-4 right-4 bg-gray-800 text-white p-3 rounded-full shadow-lg z-30 transform transition-transform duration-300 hover:scale-105">
-            <i class="fas fa-lock text-xl"></i>
-        </button>
 
         <main id="content-area" class="flex flex-col gap-8"></main>
 
@@ -159,13 +161,7 @@
         </div>
     </div>
 
-    <div id="code-panel" class="code-panel">
-        <h2 class="text-2xl font-bold text-white mb-4 text-center">Enter the Codes</h2>
-        <p class="text-sm text-gray-400 mb-6 text-center">Codes are revealed after completing each activity. Enter them here to progress.</p>
-        <div id="code-entry-section" class="flex flex-col gap-4"></div>
-        <div id="final-code-feedback" class="mt-4 text-center"></div>
-        <div id="timer-display" class="mt-4 text-center text-white text-lg font-bold"></div>
-    </div>
+    <div id="timer-display" class="fixed bottom-20 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-sm font-bold px-4 py-2 rounded-full z-20 hidden"></div>
 
     <div id="my-modal" class="modal fixed top-0 left-0 w-full h-full bg-gray-800 bg-opacity-75 flex justify-center items-center z-50 hidden">
         <div class="modal-content bg-white p-6 md:p-8 rounded-xl shadow-2xl max-w-lg w-full">
@@ -183,25 +179,25 @@
         const backButton = document.getElementById('back-button');
         const feedbackDiv = document.getElementById('feedback-div');
         const progressBar = document.getElementById('progress-bar');
-        const codePanel = document.getElementById('code-panel');
-        const codePanelToggle = document.getElementById('code-panel-toggle');
-        const codeEntrySection = document.getElementById('code-entry-section');
-        const finalCodeFeedback = document.getElementById('final-code-feedback');
         const modal = document.getElementById('my-modal');
         const modalTitle = document.getElementById('modal-title');
         const modalMessage = document.getElementById('modal-message');
         const modalCloseBtn = document.getElementById('modal-close-btn');
-        const timerDisplay = document.getElementById('timer-display');
+        if (modalCloseBtn) { modalCloseBtn.onclick = () => modal.classList.add('hidden'); }
+        const timerDisplay = document.getElementById('timer-display'); if(timerDisplay) timerDisplay.classList.remove('hidden');
+
+        const NER_PREFIX = 'ner_';
+        const SHEETS_URL = localStorage.getItem('ner_sheets_url') || 'https://script.google.com/macros/s/AKfycby1Tyf3MrFinkXFWqa-XXcBYzUFafB4etj3lH2QanK-K_cZCeAy1pMS2uWH5H2CivX_Ew/exec';
 
         // State Variables
         let currentStep = 0;
         let mainTimerInterval = null;
         let mainTimeElapsed = parseInt(localStorage.getItem('mainTimeElapsed')) || 0;
-        let correctCodesEntered = JSON.parse(localStorage.getItem('correctCodesEntered')) || {
-            activity1: false, activity2: false, activity3: false
+        let correctCodesEntered = JSON.parse(localStorage.getItem('correctCodesEntered') || '{}') || {
+            activity1: false, activity2: false
         };
-        let enteredCodes = JSON.parse(localStorage.getItem('enteredCodes')) || {
-            activity1: '', activity2: '', activity3: ''
+        let enteredCodes = JSON.parse(localStorage.getItem('enteredCodes') || '{}') || {
+            activity1: '', activity2: ''
         };
         let activityScores = JSON.parse(localStorage.getItem('activityScores')) || {
             activity1: { correct: 0, total: 0 },
@@ -224,8 +220,7 @@
 
         const activityCodes = {
             activity1: 'MIGRAINE',
-            activity2: 'THUNDER',
-            activity3: 'SNNOOP10'
+            activity2: 'THUNDER'
         };
 
         let currentQuestionIndex = parseInt(localStorage.getItem('currentQuestionIndex_activity2')) || 0;
@@ -235,14 +230,31 @@
         // MAIN STEPS (Activities 1-3 + intro/conclusion)
         // =====================================================================
         const steps = [
-            {
+{
                 type: 'intro',
-                title: 'Welcome, Nurse!',
-                subtitle: 'Your clinical journey begins now. Complete all activities to find the codes and unlock the final challenge.',
-                content: `<p class="text-lg text-gray-700">You've just clocked in for your first shift. The patient's chart is locked, and the only way to access it is to solve a series of puzzles related to headache diagnosis. Each completed task will reveal a new code. Good luck!</p>`
+                title: 'Welcome NP Student!',
+                subtitle: 'Your clinical journey begins now. Complete all activities to release the codes needed to unlock various aspects of the case and escape the challenge.',
+                content: `<p class="text-lg text-gray-700">You've just clocked in for your first clinical shift. You have three patient's left to see, and the only way to complete your shift and escape the clinic is to solve a series of puzzles related to headache diagnosis and management planning. Each completed task will reveal a new code that will help you progress through the case. Let's begin seeing our first patient, Anna Jacobs. Good luck!</p>`
             },
-            // ---- ANNA JACOBS PRE-ACTIVITY PAGES ----
+
             {
+                type: 'section-banner-anna-1',
+                title: 'Section 1: History & Examination',
+                content: `
+                    <div class="text-center py-6">
+                        <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl mb-4">
+                            <i class="fas fa-clipboard-list text-white text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-extrabold text-gray-800 mb-2">Section 1</h2>
+                        <h3 class="text-2xl font-bold text-blue-800 mb-3">History & Examination</h3>
+                        <p class="text-gray-600 text-lg max-w-lg mx-auto">Gather Anna's history, medications, social history, and review of systems.</p>
+                    </div>
+                    <div class="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-xl text-center">
+                        <p class="text-sm text-blue-800 font-medium">Click <strong>Next</strong> to begin this section.</p>
+                    </div>
+                `
+            },
+{
                 type: 'anna-new-patient',
                 title: 'New Patient',
                 content: `
@@ -258,9 +270,10 @@
                     <div id="anna-intro-feedback" class="mt-4 text-center font-semibold hidden"></div>
                 `
             },
-            {
+
+{
                 type: 'anna-basic-info',
-                title: 'Basic and Surgical Information Learned!',
+                title: 'History of Present Illness and Past Medical History Learned',
                 content: `
                     <p class="mb-4 p-3 bg-green-50 text-green-700 font-semibold rounded-lg">Good job! You kindly introduced yourself to your patient and you learned about their general information.</p>
                     <p class="text-lg font-semibold">Name: Anna Jacobs</p>
@@ -269,7 +282,7 @@
                     <p class="mt-4 font-bold">Chief Complaint: Headaches</p>
                     <p class="italic mt-2">Patient Quote:</p>
                     <blockquote class="bg-gray-100 p-4 rounded-lg border-l-4 border-gray-400 mt-2">
-                        "I've been having these headaches on and off for about 3-4 months. I get them maybe 2-3 times a week and they last roughly 3-5 hours. They start light and gradually get worse over time. It sometimes feels like a tight band across my forehead, it doesn't feel like a radiating pain. At its worse it is about a 4-5 on a pain scale, 10 being the worst pain I have ever felt. I'm not 100% sure what causes it but it seems to happen after a long and stressful day at work. It seems to get better with rest, relaxation or two tablets of Tylenol or Advil."
+                        "I've been having these headaches on and off for about 3-4 months. I get them maybe 2-3 times a week and they last roughly 3-5 hours. They start light and gradually get worse over time. It sometimes feels like a tight band across my forehead, it doesn't feel like a radiating pain. At its worse it is about a 4-5 out of 10 on a pain scale. I'm not 100% sure what causes it but it seems to happen after a long and stressful day at work. It seems to get better with rest, relaxation or two tablets of Tylenol or Advil."
                     </blockquote>
                     <p class="mt-4 font-bold">Associated Symptoms:</p>
                     <p>Muscle tightness to shoulders intermittently, no other notable associated symptoms.</p>
@@ -280,7 +293,8 @@
                     <p class="mt-6 text-blue-600 font-medium">Click 'Next' to learn about Anna's family history.</p>
                 `
             },
-            {
+
+{
                 type: 'anna-family-history',
                 title: 'Family History',
                 content: `
@@ -298,7 +312,8 @@
                     <p class="mt-6 text-blue-600 font-medium">Click 'Next' to learn about Anna's medicinal information.</p>
                 `
             },
-            {
+
+{
                 type: 'anna-medications',
                 title: 'Medicinal Information',
                 content: `
@@ -313,7 +328,8 @@
                     <p class="mt-6 text-blue-600 font-medium">Click 'Next' to view Anna's social history.</p>
                 `
             },
-            {
+
+{
                 type: 'anna-social-history',
                 title: 'Social History',
                 content: `
@@ -331,7 +347,8 @@
                     <p class="mt-6 text-blue-600 font-medium">Click 'Next' to learn about Anna's dietary information.</p>
                 `
             },
-            {
+
+{
                 type: 'anna-dietary',
                 title: 'Dietary Information Learned!',
                 content: `
@@ -350,7 +367,8 @@
                     <p class="mt-6 text-blue-600 font-medium">Click 'Next' to learn about Anna's review of systems.</p>
                 `
             },
-            {
+
+{
                 type: 'anna-review-systems',
                 title: 'Review of Systems',
                 content: `
@@ -376,110 +394,26 @@
                     </div>
                 `
             },
+
             {
-                type: 'anna-headache-intro',
-                title: 'Clinical Reasoning: Primary Headaches',
+                type: 'section-banner-anna-2',
+                title: 'Section 2: Differential Diagnosis & Management Planning',
                 content: `
-                    <p class="text-gray-700 leading-relaxed">Good job in continuing to evaluate the cause of Anna's headaches. Next you'll find a quiz focusing on the characteristics of primary headaches. You will have to click the type of headache that matches with the characteristic/symptom listed.</p>
-                    <p class="mt-4 text-gray-700 leading-relaxed">This knowledge will prove crucial for an upcoming part of the assignment. Understanding the distinct features of various primary headaches will aid us in diagnosing Anna's headaches.</p>
-                    <div class="mt-6 p-5 bg-blue-50 rounded-lg border border-blue-200">
-                        <h3 class="text-lg font-bold text-blue-800 mb-2">&#128203; What's Coming Next:</h3>
-                        <p class="text-blue-700">A headache classification quiz — for each symptom or characteristic shown, click the matching headache type: <strong>Tension Headache</strong>, <strong>Migraine</strong>, or <strong>Cluster Headache</strong>.</p>
+                    <div class="text-center py-6">
+                        <div class="inline-flex items-center justify-center w-16 h-16 bg-green-600 rounded-2xl mb-4">
+                            <i class="fas fa-stethoscope text-white text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-extrabold text-gray-800 mb-2">Section 2</h2>
+                        <h3 class="text-2xl font-bold text-green-800 mb-3">Differential Diagnosis & Management Planning</h3>
+                        <p class="text-gray-600 text-lg max-w-lg mx-auto">Work through clinical decision points and develop Anna's management plan.</p>
                     </div>
-                    <p class="mt-6 text-blue-600 font-medium">Click 'Next' when you're ready to begin Activity 1.</p>
+                    <div class="mt-4 p-4 bg-green-50 border border-green-200 rounded-xl text-center">
+                        <p class="text-sm text-green-800 font-medium">Click <strong>Next</strong> to begin this section.</p>
+                    </div>
                 `
             },
-            // ---- END ANNA JACOBS PRE-ACTIVITY PAGES ----
-            {
-                type: 'activity1',
-                title: 'Activity 1: Primary Headache Knowledge',
-                subtitle: 'Drag the symptoms to the correct headache type.',
-                content: `<p class="text-sm text-gray-600">Learning Outcome 1: Primary headache knowledge.</p>`,
-                headacheTypes: ['Tension Headache', 'Migraine', 'Cluster Headache'],
-                symptoms: [
-                    { name: 'Unilateral, throbbing pain', type: 'Migraine' },
-                    { name: 'Bilateral, pressing pain', type: 'Tension Headache' },
-                    { name: 'Aura (visual disturbances)', type: 'Migraine' },
-                    { name: 'Photophobia, phonophobia', type: 'Migraine' },
-                    { name: 'Severe, excruciating, unilateral pain', type: 'Cluster Headache' },
-                    { name: 'Nausea and vomiting', type: 'Migraine' },
-                    { name: 'Restlessness, agitation', type: 'Cluster Headache' },
-                    { name: 'Occurs in cycles/clusters', type: 'Cluster Headache' },
-                    { name: 'Chronic, daily pain', type: 'Tension Headache' },
-                    { name: 'Associated with runny nose, eyelid swelling', type: 'Cluster Headache' }
-                ]
-            },
-            {
-                type: 'activity2',
-                title: 'Activity 2: Red Flag Symptoms',
-                subtitle: 'Identify the underlying causes of secondary headaches.',
-                content: `<p class="text-sm text-gray-600">Learning Outcome 2: Identify red flag symptoms for serious conditions.</p>`,
-                questions: [
-                    { question: 'A sudden, severe "thunderclap" headache is a classic red flag for what life-threatening condition?', options: ['Tension Headache', 'Subarachnoid Hemorrhage', 'Migraine with Aura', 'Sinusitis'], correctAnswer: 1 },
-                    { question: 'A headache accompanied by fever and a stiff neck suggests which serious infection?', options: ['Common Cold', 'Meningitis', 'Cervical Strain', 'Migraine'], correctAnswer: 1 },
-                    { question: 'A headache that worsens with a cough, sneeze, or strain could indicate a rise in what?', options: ['Blood pressure', 'Intracranial pressure', 'Heart rate', 'Respiratory rate'], correctAnswer: 1 },
-                    { question: 'A new-onset headache in a patient over 50 years old, especially with jaw pain, is a red flag for what inflammatory condition?', options: ['Giant Cell Arteritis', 'Trigeminal Neuralgia', 'Cluster Headache', 'Tension Headache'], correctAnswer: 0 },
-                    { question: 'What is a major concern when a patient presents with a headache and new neurological symptoms like weakness or numbness?', options: ['Anxiety attack', 'Stroke or brain tumor', 'Dehydration', 'Sleep deprivation'], correctAnswer: 1 },
-                    { question: 'Headache that starts after a recent head injury is a red flag for what type of intracranial bleed?', options: ['Subarachnoid Hemorrhage', 'Intracerebral Hemorrhage', 'Epidural or Subdural Hematoma', 'Cerebral Aneurysm'], correctAnswer: 2 },
-                    { question: 'Headache in a patient with a known history of cancer should be considered a red flag for what?', options: ['Medication side effects', 'Chemotherapy-induced headache', 'Migraine relapse', 'Metastatic disease to the brain'], correctAnswer: 3 },
-                    { question: 'A headache with papilledema (swelling of the optic disc) is a sign of what serious medical issue?', options: ['Conjunctivitis', 'Increased Intracranial Pressure', 'Retinal Detachment', 'Optic Neuritis'], correctAnswer: 1 },
-                    { question: 'A headache that awakens a patient from sleep is a key feature of which headache type, often considered a red flag for a more serious condition?', options: ['Chronic Migraine', 'Tension Headache', 'Cluster Headache', 'Sinus Headache'], correctAnswer: 2 },
-                    { question: 'A pregnant patient with a new-onset headache, particularly with elevated blood pressure, may be showing signs of what life-threatening condition?', options: ['Gestational diabetes', 'Preeclampsia/Eclampsia', 'Placenta previa', 'Morning sickness'], correctAnswer: 1 }
-                ]
-            },
-            {
-                type: 'activity3',
-                title: 'Activity 3: SNNOOP10 Red Flag Recognition',
-                subtitle: 'Identify red flag symptoms for serious headache conditions.',
-                content: `<p class="text-sm text-gray-600">Learning Outcome 3: Recognizing red flag symptoms using the SNNOOP10 mnemonic.</p>`,
-                parts: {
-                    part1: {
-                        title: 'Part 1: Red Flag or Green Flag',
-                        description: 'Drag the symptoms to the correct category.',
-                        items: [
-                            { name: 'History of Neoplasm', type: 'red' },
-                            { name: 'A common migraine or tension-type headache with a stable pattern of recurrent pain without significant changes over several years', type: 'green' },
-                            { name: 'Papilledema', type: 'red' },
-                            { name: 'Posttraumatic headaches if greater than three months', type: 'red' },
-                            { name: 'Systemic headaches with an isolated fever', type: 'red' },
-                            { name: 'Headache that improves with over-the-counter medication', type: 'green' },
-                            { name: 'Headache with new neurological deficits', type: 'red' },
-                            { name: 'Headache in patient over 50 years old', type: 'red' },
-                            { name: 'Recurrent headache with family history of migraines', type: 'green' },
-                            { name: 'Headache that awakens patient from sleep', type: 'red' }
-                        ]
-                    },
-                    part2: {
-                        title: 'Part 2: SNNOOP10 Knowledge Check',
-                        description: 'Answer these questions about the SNNOOP10 mnemonic (unlimited attempts)',
-                        questions: [
-                            { question: 'This is the number of symptoms that fall under the SNNOOP10 mnemonic', answer: '10', hint: 'The name gives it away!' },
-                            { question: 'This is the type of headache that SNNOOP10 covers', answer: 'secondary', hint: 'Think about what kind of headaches have red flags' },
-                            { question: 'This decade was when the SNNOOP10 system was introduced', answer: '2000s', hint: 'It was developed in the 21st century' },
-                            { question: 'This represents the severity of the symptom in the SNNOOP10 mnemonic', answer: 'severity', hint: 'The "10" represents this aspect' },
-                            { question: 'This type of headache is often described as a throbbing pain on one side of the head, accompanied by nausea and sensitivity to light and sound', answer: 'migraine', hint: 'A common primary headache disorder' },
-                            { question: 'This rare condition involves sudden, excruciating headaches often likened to "the worst headache of my life," which may result from a rupture or leaking of a blood vessel in the brain', answer: 'subarachnoid hemorrhage', hint: 'Think about brain bleeds' },
-                            { question: 'Headaches in the third trimester of _____ warrants investigation for various disorders such as pre-eclampsia', answer: 'pregnancy', hint: 'A special condition in women' },
-                            { question: 'What\'s the pattern of headaches that is not typical in primary headache disorders and considered a red flag', answer: 'progressive', hint: 'Headaches that keep getting worse' },
-                            { question: 'What kind of headache is characterized by sudden, severe pain that peaks within seconds to minutes and may indicate a medical emergency such as a brain hemorrhage', answer: 'thunderclap', hint: 'Think about weather metaphors' },
-                            { question: 'These headaches occur as a result of prolonged use of pain relievers, typically rebounding in intensity after the medication wears off', answer: 'medication overuse', hint: 'Caused by the treatment itself' }
-                        ]
-                    },
-                    part3: {
-                        title: 'Part 3: True or False',
-                        description: 'Determine if these are SNNOOP10 symptoms (one attempt per question)',
-                        questions: [
-                            { question: 'Precipitated by cough is a SNNOOP10 symptom', answer: true, explanation: 'TRUE - Onset with exertion/cough is part of SNNOOP10' },
-                            { question: 'Photophobia and Phonophobia is a SNNOOP10 symptom', answer: false, explanation: 'FALSE - These are common in migraines but not red flags in SNNOOP10' },
-                            { question: 'Pulsating headache pattern is a SNNOOP10 symptom', answer: false, explanation: 'FALSE - Pulsating quality is typical of migraines, not a red flag' },
-                            { question: 'Sudden onset "Thunderclap" headache is a SNNOOP10 symptom', answer: true, explanation: 'TRUE - Sudden onset is a major red flag in SNNOOP10' },
-                            { question: 'Palpable temporal artery abnormalities is a SNNOOP10 symptom', answer: true, explanation: 'TRUE - This relates to giant cell arteritis, covered in SNNOOP10' }
-                        ]
-                    }
-                }
-            },
-            // ---- ANNA POST-ACTIVITY MANAGEMENT PAGES ----
-            {
+
+{
                 type: 'anna-dp1',
                 title: 'Decision Point #1',
                 content: `
@@ -503,7 +437,8 @@
                     <div id="dp1-feedback" class="mt-4 text-center font-semibold hidden"></div>
                 `
             },
-            {
+
+{
                 type: 'anna-next-step',
                 title: 'What is the next step?',
                 content: `
@@ -520,7 +455,8 @@
                     <div id="anna-next-step-feedback" class="mt-4 text-center font-semibold hidden"></div>
                 `
             },
-            {
+
+{
                 type: 'anna-physical-exam',
                 title: 'Further Patient Case Considerations Learned!',
                 content: `
@@ -540,7 +476,8 @@
                     </div>
                 `
             },
-            {
+
+{
                 type: 'anna-dp2',
                 title: 'Decision Point #2',
                 content: `
@@ -570,7 +507,8 @@
                     <div id="dp2-feedback" class="mt-4 text-center font-semibold hidden"></div>
                 `
             },
-            {
+
+{
                 type: 'anna-dp2-recap',
                 title: 'Brief Clinical Decision Making Recap',
                 content: `
@@ -595,7 +533,8 @@
                     <p class="mt-4 text-gray-700">As seen above, the clues or pertinent positive and negative findings we collected from Anna's history aided in our clinical decision making. As tension headache is our working or primary diagnosis, we will now shift our focus on engaging in shared decision-making with Anna in managing her tension headaches.</p>
                 `
             },
-            {
+
+{
                 type: 'anna-management-overview',
                 title: 'Management Plan and Process',
                 content: `
@@ -612,7 +551,8 @@
                     <p class="mt-6 text-blue-600 font-medium">Let's explore the first step in the management planning process.</p>
                 `
             },
-            {
+
+{
                 type: 'anna-diagnostics',
                 title: 'Diagnostic Workup and Investigations',
                 content: `
@@ -636,7 +576,8 @@
                     <div id="anna-diag-feedback" class="mt-4 p-4 rounded-lg font-semibold hidden"></div>
                 `
             },
-            {
+
+{
                 type: 'anna-pharma',
                 title: 'Pharmacological and Non-Pharmacological Therapeutics',
                 content: `
@@ -660,7 +601,8 @@
                     <div id="anna-pharma-feedback" class="mt-4 p-4 rounded-lg font-semibold hidden"></div>
                 `
             },
-            {
+
+{
                 type: 'anna-non-pharma',
                 title: 'Pharmacological and Non-Pharmacological Therapeutics',
                 content: `
@@ -684,7 +626,8 @@
                     <div id="anna-nonpharma-feedback" class="mt-4 p-4 rounded-lg font-semibold hidden"></div>
                 `
             },
-            {
+
+{
                 type: 'anna-education',
                 title: 'Patient Education',
                 content: `
@@ -696,7 +639,8 @@
                     </ul>
                 `
             },
-            {
+
+{
                 type: 'anna-health-promotion',
                 title: 'Health Promotion, Prevention, and Screening',
                 content: `
@@ -713,7 +657,8 @@
                     </div>
                 `
             },
-            {
+
+{
                 type: 'anna-referrals',
                 title: 'Referrals, Red Flags, and Specific Follow-Up Plans',
                 content: `
@@ -734,7 +679,64 @@
                     </div>
                 `
             },
+
             {
+                type: 'section-banner-anna-3',
+                title: 'Section 3: Interactive Learning Games & Challenges',
+                content: `
+                    <div class="text-center py-6">
+                        <div class="inline-flex items-center justify-center w-16 h-16 bg-purple-600 rounded-2xl mb-4">
+                            <i class="fas fa-gamepad text-white text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-extrabold text-gray-800 mb-2">Section 3</h2>
+                        <h3 class="text-2xl font-bold text-purple-800 mb-3">Interactive Learning Games & Challenges</h3>
+                        <p class="text-gray-600 text-lg max-w-lg mx-auto">Complete the headache classification and red flag activities.</p>
+                    </div>
+                    <div class="mt-4 p-4 bg-purple-50 border border-purple-200 rounded-xl text-center">
+                        <p class="text-sm text-purple-800 font-medium">Click <strong>Next</strong> to begin this section.</p>
+                    </div>
+                `
+            },
+{
+                type: 'activity1',
+                title: 'Activity 1: Primary Headache Knowledge',
+                subtitle: 'Drag the symptoms to the correct headache type.',
+                content: `<p class="text-sm text-gray-600">Learning Outcome 1: Primary headache knowledge.</p>`,
+                headacheTypes: ['Tension Headache', 'Migraine', 'Cluster Headache'],
+                symptoms: [
+                    { name: 'Unilateral, throbbing pain', type: 'Migraine' },
+                    { name: 'Bilateral, pressing pain', type: 'Tension Headache' },
+                    { name: 'Aura (visual disturbances)', type: 'Migraine' },
+                    { name: 'Photophobia, phonophobia', type: 'Migraine' },
+                    { name: 'Severe, excruciating, unilateral pain', type: 'Cluster Headache' },
+                    { name: 'Nausea and vomiting', type: 'Migraine' },
+                    { name: 'Restlessness, agitation', type: 'Cluster Headache' },
+                    { name: 'Occurs in cycles/clusters', type: 'Cluster Headache' },
+                    { name: 'Chronic, daily pain', type: 'Tension Headache' },
+                    { name: 'Associated with runny nose, eyelid swelling', type: 'Cluster Headache' }
+                ]
+            },
+
+{
+                type: 'activity2',
+                title: 'Activity 2: Red Flag Symptoms',
+                subtitle: 'Identify the underlying causes of secondary headaches.',
+                content: `<p class="text-sm text-gray-600">Learning Outcome 2: Identify red flag symptoms for serious conditions.</p>`,
+                questions: [
+                    { question: 'A sudden, severe "thunderclap" headache is a classic red flag for what life-threatening condition?', options: ['Tension Headache', 'Subarachnoid Hemorrhage', 'Migraine with Aura', 'Sinusitis'], correctAnswer: 1 },
+                    { question: 'A headache accompanied by fever and a stiff neck suggests which serious infection?', options: ['Common Cold', 'Meningitis', 'Cervical Strain', 'Migraine'], correctAnswer: 1 },
+                    { question: 'A headache that worsens with a cough, sneeze, or strain could indicate a rise in what?', options: ['Blood pressure', 'Intracranial pressure', 'Heart rate', 'Respiratory rate'], correctAnswer: 1 },
+                    { question: 'A new-onset headache in a patient over 50 years old, especially with jaw pain, is a red flag for what inflammatory condition?', options: ['Giant Cell Arteritis', 'Trigeminal Neuralgia', 'Cluster Headache', 'Tension Headache'], correctAnswer: 0 },
+                    { question: 'What is a major concern when a patient presents with a headache and new neurological symptoms like weakness or numbness?', options: ['Anxiety attack', 'Stroke or brain tumor', 'Dehydration', 'Sleep deprivation'], correctAnswer: 1 },
+                    { question: 'Headache that starts after a recent head injury is a red flag for what type of intracranial bleed?', options: ['Subarachnoid Hemorrhage', 'Intracerebral Hemorrhage', 'Epidural or Subdural Hematoma', 'Cerebral Aneurysm'], correctAnswer: 2 },
+                    { question: 'Headache in a patient with a known history of cancer should be considered a red flag for what?', options: ['Medication side effects', 'Chemotherapy-induced headache', 'Migraine relapse', 'Metastatic disease to the brain'], correctAnswer: 3 },
+                    { question: 'A headache with papilledema (swelling of the optic disc) is a sign of what serious medical issue?', options: ['Conjunctivitis', 'Increased Intracranial Pressure', 'Retinal Detachment', 'Optic Neuritis'], correctAnswer: 1 },
+                    { question: 'A headache that awakens a patient from sleep is a key feature of which headache type, often considered a red flag for a more serious condition?', options: ['Tension Headache', 'Sinus Headache', 'Subarachnoid Hemorrhage', 'Medication Overuse Headache'], correctAnswer: 2 },
+                    { question: 'A pregnant patient with a new-onset headache, particularly with elevated blood pressure, may be showing signs of what life-threatening condition?', options: ['Gestational diabetes', 'Preeclampsia/Eclampsia', 'Placenta previa', 'Morning sickness'], correctAnswer: 1 }
+                ]
+            },
+
+{
                 type: 'anna-final',
                 title: 'Congratulations!',
                 content: `
@@ -748,20 +750,38 @@
                     </div>
                 `
             },
-            // ---- END ANNA POST-ACTIVITY MANAGEMENT PAGES ----
-            {
+
+{
                 type: 'conclusion',
                 title: 'You escaped!',
-                subtitle: 'The patient chart is now unlocked. You are a true healthcare hero.',
-                content: `<p class="text-lg text-gray-700">Your quick thinking and knowledge saved the day. The codes you unlocked have given you access to the patient's full record, allowing you to provide the best possible care. You've earned a well-deserved break!</p>`
+                subtitle: '',
+                content: `<p class="text-lg text-gray-700">You helped Anna with her headaches and are now one step closer to escaping the clinic. You have two patients left to see. Let's go and meet Tyler Haley and learn more about his headaches. Click on Case 2 below.</p>`
             }
-        ];
+
+                ];
 
         // =====================================================================
         // PATIENT CHART STEPS (Tyler Haley)
         // =====================================================================
         const patientChartSteps = [
             {
+                type: 'section-banner-tyler-1',
+                title: 'Section 1: History & Examination',
+                content: `
+                    <div class="text-center py-6">
+                        <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl mb-4">
+                            <i class="fas fa-clipboard-list text-white text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-extrabold text-gray-800 mb-2">Section 1</h2>
+                        <h3 class="text-2xl font-bold text-blue-800 mb-3">History & Examination</h3>
+                        <p class="text-gray-600 text-lg max-w-lg mx-auto">Review Tyler's history, medications, social history, and symptoms.</p>
+                    </div>
+                    <div class="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-xl text-center">
+                        <p class="text-sm text-blue-800 font-medium">Click <strong>Next</strong> to begin this section.</p>
+                    </div>
+                `
+            },
+{
                 type: 'patient-records',
                 title: 'Patient Records',
                 content: `
@@ -779,7 +799,8 @@
                     <ul class="list-disc list-inside mt-2"><li>Cholecystectomy in 2017, no complications</li></ul>
                 `
             },
-            {
+
+{
                 type: 'family-history',
                 title: 'Family History Learned!',
                 content: `
@@ -797,7 +818,8 @@
                     </div>
                 `
             },
-            {
+
+{
                 type: 'medications',
                 title: 'Medications Learned!',
                 content: `
@@ -813,7 +835,8 @@
                     </div>
                 `
             },
-            {
+
+{
                 type: 'social-history',
                 title: 'Social History Learned!',
                 content: `
@@ -821,7 +844,8 @@
                     <p class="mt-2">Tyler tries to eat healthy but admits that his diet is not well balanced as he is not a big fan of vegetables. He drinks 4 liters of water daily at work and roughly 2 liters on his days off. He drinks 3 cups of coffee per day and has 2-3 beers after work to relax. He smokes 4-5 cigarettes on his workdays as he gets more breaks when he smokes. He smokes 1-2 cigarettes on his days off. He does not use any other substances. He does not exercise often but feels his work is labor intensive and counts as exercise.</p>
                 `
             },
-            {
+
+{
                 type: 'review-of-symptoms',
                 title: 'Review of Symptoms:',
                 content: `
@@ -834,7 +858,25 @@
                     </ul>
                 `
             },
+
             {
+                type: 'section-banner-tyler-2',
+                title: 'Section 2: Differential Diagnosis & Management Planning',
+                content: `
+                    <div class="text-center py-6">
+                        <div class="inline-flex items-center justify-center w-16 h-16 bg-green-600 rounded-2xl mb-4">
+                            <i class="fas fa-stethoscope text-white text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-extrabold text-gray-800 mb-2">Section 2</h2>
+                        <h3 class="text-2xl font-bold text-green-800 mb-3">Differential Diagnosis & Management Planning</h3>
+                        <p class="text-gray-600 text-lg max-w-lg mx-auto">Work through clinical decision points for Tyler's complex presentation.</p>
+                    </div>
+                    <div class="mt-4 p-4 bg-green-50 border border-green-200 rounded-xl text-center">
+                        <p class="text-sm text-green-800 font-medium">Click <strong>Next</strong> to begin this section.</p>
+                    </div>
+                `
+            },
+{
                 type: 'decision-point-1',
                 title: 'Decision Point #1',
                 content: `
@@ -855,7 +897,8 @@
                     </ul>
                 `
             },
-            {
+
+{
                 type: 'physical-exam',
                 title: 'Tyler\'s Physical Examination',
                 content: `
@@ -870,7 +913,8 @@
                     <p class="mt-2 font-bold">Neurological/Musculoskeletal:</p><p>Cranial nerves II through XII grossly intact. Strength +5 bilaterally, sensation intact, cerebellar function demonstrated dysmetria during Finger-to-Nose test, other cerebellar testing intact. Deep Tendon Reflexes: +2 bilaterally. Romberg negative with no pronator drift.</p>
                 `
             },
-            {
+
+{
                 type: 'decision-point-2',
                 title: 'Decision Point #2',
                 content: `
@@ -891,7 +935,8 @@
                     </ul>
                 `
             },
-            {
+
+{
                 type: 'final-review',
                 title: 'Congratulations on narrowing your differentials!',
                 content: `
@@ -910,7 +955,8 @@
                     </div>
                 `
             },
-            {
+
+{
                 type: 'decision-point-3',
                 title: 'The history, physical examination, and differential diagnosis guide our management planning.',
                 content: `
@@ -926,26 +972,119 @@
                     <button id="submit-decision" class="mt-6 px-8 py-4 bg-green-500 text-white rounded-lg font-semibold shadow-md hover:bg-green-600 transition-colors transform hover:scale-105">Submit</button>
                 `
             },
+
             {
+                type: 'section-banner-tyler-3',
+                title: 'Section 3: Interactive Learning Games & Challenges',
+                content: `
+                    <div class="text-center py-6">
+                        <div class="inline-flex items-center justify-center w-16 h-16 bg-purple-600 rounded-2xl mb-4">
+                            <i class="fas fa-gamepad text-white text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-extrabold text-gray-800 mb-2">Section 3</h2>
+                        <h3 class="text-2xl font-bold text-purple-800 mb-3">Interactive Learning Games & Challenges</h3>
+                        <p class="text-gray-600 text-lg max-w-lg mx-auto">Review the diagnosis and complete the SNNOOP10 activity.</p>
+                    </div>
+                    <div class="mt-4 p-4 bg-purple-50 border border-purple-200 rounded-xl text-center">
+                        <p class="text-sm text-purple-800 font-medium">Click <strong>Next</strong> to begin this section.</p>
+                    </div>
+                `
+            },
+{
                 type: 'diagnosis-reveal',
                 title: 'You did it!',
                 content: `<p>Through your astute assessment, clinical reasoning and decision-making skills, you identified that Tyler presented with red flag symptoms indicating a secondary cause for his headaches. Tyler was promptly transferred to the emergency department via ambulance and promptly assessed by the Emergency Physician. Tyler was promptly diagnosed with a space-occupying lesion called Glioblastoma Multiforme, which is an aggressive type of malignant brain tumor. Tyler was promptly connected with a neurosurgeon and the BC Cancer Agency to develop a treatment plan to manage his newly identified condition.</p>`
             },
-            {
+
+{
+                type: 'activity3',
+                title: 'Activity 3: SNNOOP10 Red Flag Recognition',
+                subtitle: 'Identify red flag symptoms for serious headache conditions.',
+                content: `<p class="text-sm text-gray-600">Learning Outcome 3: Recognizing red flag symptoms using the SNNOOP10 mnemonic.</p>`,
+                parts: {
+                    part1: {
+                        title: 'Part 1: Red Flag or Green Flag',
+                        description: 'Drag the symptoms to the correct category.',
+                        items: [
+                            { name: 'History of Neoplasm', type: 'red' },
+                            { name: 'A common migraine or tension-type headache with a stable pattern of recurrent pain without significant changes over several years', type: 'green' },
+                            { name: 'Papilledema', type: 'red' },
+                            { name: 'Posttraumatic headaches if greater than three months', type: 'red' },
+                            { name: 'Systemic headaches with an isolated fever', type: 'red' },
+                            { name: 'Headache that improves with over-the-counter medication', type: 'green' },
+                            { name: 'Headache with new neurological deficits', type: 'red' },
+                            { name: 'Headache in patient over 50 years old', type: 'red' },
+                            { name: 'Recurrent headache with family history of migraines', type: 'green' },
+                            { name: 'Headache that awakens patient from sleep', type: 'red' }
+                        ]
+                    },
+                    part2: {
+                        title: 'Part 2: SNNOOP10 Knowledge Check',
+                        description: 'Answer these questions about the SNNOOP10 mnemonic (unlimited attempts). Once you skip a question, you cannot attempt it again.',
+                        questions: [
+                            { question: 'This is the number of symptoms that fall under the SNNOOP10 mnemonic', answer: '15', hint: 'It is the number of Ps + the other letters (SNNOO).' },
+                            { question: 'This is the type of headache that SNNOOP10 covers', answer: 'secondary', hint: 'Think about what kind of headaches have red flags' },
+                            { question: 'This type of headache is often described as a throbbing pain on one side of the head, accompanied by nausea and sensitivity to light and sound', answer: 'migraine', hint: 'A common primary headache disorder' },
+                            { question: 'This rare condition involves sudden, excruciating headaches often likened to \"the worst headache of my life,\" which may result from a rupture or leaking of a blood vessel in the brain', answer: 'subarachnoid hemorrhage', hint: 'Think about brain bleeds' },
+                            { question: 'Headaches in the third trimester of _____ warrants investigation for various disorders such as pre-eclampsia', answer: 'pregnancy', hint: 'A special condition in women' },
+                            { question: 'What\'s the pattern of headaches that is not typical in primary headache disorders and considered a red flag', answer: 'progressive', hint: 'Headaches that keep getting worse' },
+                            { question: 'What kind of headache is characterized by sudden, severe pain that peaks within seconds to minutes and may indicate a medical emergency such as a brain hemorrhage', answer: 'thunderclap', hint: 'Think about weather metaphors' },
+                            { question: 'These headaches occur as a result of prolonged use of pain relievers, typically rebounding in intensity after the medication wears off', answer: 'medication overuse', hint: 'Caused by the treatment itself' }
+                        ]
+                    },
+                    part3: {
+                        title: 'Part 3: True or False',
+                        description: 'Determine if these are SNNOOP10 symptoms (one attempt per question)',
+                        questions: [
+                            { question: 'Precipitated by cough is a SNNOOP10 symptom', answer: true, explanation: 'TRUE - Onset with exertion/cough is part of SNNOOP10' },
+                            { question: 'Photophobia and Phonophobia is a SNNOOP10 symptom', answer: false, explanation: 'FALSE - These are common in migraines but not red flags in SNNOOP10' },
+                            { question: 'Pulsating headache pattern is a SNNOOP10 symptom', answer: false, explanation: 'FALSE - Pulsating quality is typical of migraines, not a red flag' },
+                            { question: 'Sudden onset "Thunderclap" headache is a SNNOOP10 symptom', answer: true, explanation: 'TRUE - Sudden onset is a major red flag in SNNOOP10' },
+                            { question: 'Palpable temporal artery abnormalities is a SNNOOP10 symptom', answer: true, explanation: 'TRUE - This relates to giant cell arteritis, covered in SNNOOP10' }
+                        ]
+                    }
+                }
+            },
+
+{
                 type: 'final-congrats',
-                title: 'Great job!',
+                title: 'Congratulations!',
                 content: `
-                    <p>You were able to help correctly diagnose a patient! Now let's move on to the next patient and continue the fun!</p>
-                    <button id="next-patient-button" class="mt-6 px-8 py-4 bg-green-500 text-white rounded-lg font-semibold shadow-md hover:bg-green-600 transition-colors transform hover:scale-105">Next Patient</button>
+                    <div class="text-center">
+                        <p class="text-xl mb-4">You helped Tyler seek additional emergency care for his headaches. You have now cared for 2 patients, and are another step closer to escaping the clinic for the day. You have one patient left to see. Let's go and meet Hannah Howard and learn more about her headaches. Click on Case 3 below.</p>
+                        <div class="mt-6 text-center">
+                            <img src="https://placehold.co/500x350?text=Certificate+of+Achievement" alt="Certificate of Achievement" class="mx-auto rounded-lg shadow-md max-w-full">
+                            <p class="text-sm text-gray-500 mt-2 italic">Certificate of Achievement</p>
+                        </div>
+                        <button id="next-patient-button" class="mt-8 px-8 py-4 bg-blue-600 text-white rounded-lg font-semibold shadow-md hover:bg-blue-700 transition-colors transform hover:scale-105">Case 3 <i class="fas fa-arrow-right ml-1"></i></button>
+                    </div>
                 `
             }
-        ];
+
+                ];
 
         // =====================================================================
         // SECOND PATIENT STEPS (Hannah Howard)
         // =====================================================================
         const secondPatientSteps = [
             {
+                type: 'section-banner-hannah-1',
+                title: 'Section 1: History & Examination',
+                content: `
+                    <div class="text-center py-6">
+                        <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl mb-4">
+                            <i class="fas fa-clipboard-list text-white text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-extrabold text-gray-800 mb-2">Section 1</h2>
+                        <h3 class="text-2xl font-bold text-blue-800 mb-3">History & Examination</h3>
+                        <p class="text-gray-600 text-lg max-w-lg mx-auto">Gather Hannah's history, medications, social history, and review of systems.</p>
+                    </div>
+                    <div class="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-xl text-center">
+                        <p class="text-sm text-blue-800 font-medium">Click <strong>Next</strong> to begin this section.</p>
+                    </div>
+                `
+            },
+{
                 type: 'second-patient-intro',
                 title: 'The Next Patient for Today',
                 content: `
@@ -961,7 +1100,8 @@
                     <div id="approach-feedback" class="mt-4 text-center font-semibold hidden"></div>
                 `
             },
-            {
+
+{
                 type: 'second-patient-basic-info',
                 title: 'Basic Information',
                 content: `
@@ -976,7 +1116,8 @@
                     <p class="mt-4 font-bold">Gynecological History:</p><p>Menarche at age 13y, regular monthly periods, typically 28-32-day cycles, LMP: 2 weeks ago, length 7 days, Gravida 0</p>
                 `
             },
-            {
+
+{
                 type: 'second-patient-family-history',
                 title: 'Family History!',
                 content: `
@@ -992,7 +1133,8 @@
                     </div>
                 `
             },
-            {
+
+{
                 type: 'second-patient-medications',
                 title: 'Medicinal Information',
                 content: `
@@ -1004,7 +1146,8 @@
                     </ul>
                 `
             },
-            {
+
+{
                 type: 'second-patient-social-history',
                 title: 'Social History Learned!',
                 content: `
@@ -1012,7 +1155,8 @@
                     <p class="mt-4">Hannah loves to cook in her time off, so she eats a variety of grass-fed meats and fresh foods. Hannah drinks 1-2 glasses of wine per night to relax. She consumes typically 2 cups of coffee per day, but sometimes can drink up to 4-5 cups. It is not well known in her friend circle, but Hannah does smoke roughly 10 cigarettes per day. She started when she was 17 years old. She does not use other substances. She enjoys going for a walk two times a week.</p>
                 `
             },
-            {
+
+{
                 type: 'second-patient-review-systems',
                 title: 'Review of Systems',
                 content: `
@@ -1025,7 +1169,8 @@
                     </ul>
                 `
             },
-            {
+
+{
                 type: 'second-patient-clinical-info',
                 title: 'Clinical Information Procession',
                 content: `
@@ -1085,32 +1230,93 @@
                     </div>
                 `
             },
-            {
+
+{
                 type: 'second-patient-conclusion',
-                title: 'Case Complete!',
+                title: 'History and Headache Video Review Complete!',
                 content: `
-                    <p class="text-lg text-gray-700">You've successfully completed the assessment of Hannah Howard. Based on her symptoms, history, and presentation, this appears to be a classic case of migraine with aura.</p>
-                    <div class="mt-6 p-4 bg-blue-50 rounded-lg">
-                        <h3 class="text-xl font-bold mb-2">Key Learning Points:</h3>
-                        <ul class="list-disc list-inside space-y-2">
-                            <li>Migraine with aura typically presents with visual disturbances before headache onset</li>
-                            <li>Common triggers include stress, certain foods, hormonal changes, and caffeine</li>
-                            <li>Migraines are more common in women and often have a family history</li>
-                            <li>Treatment involves both acute management and preventive strategies</li>
-                        </ul>
+                    <p class="text-lg text-gray-700 mb-6">You've successfully completed the subjective assessment of Hannah Howard. Based on her subjective symptoms, do you think Hannah has primary or secondary type headaches?</p>
+                    <div class="flex flex-col gap-4 mt-4">
+                        <button class="hannah-headache-type px-6 py-4 bg-blue-100 border border-blue-300 rounded-lg text-left hover:bg-blue-200 transition-colors font-semibold" data-option="primary">
+                            <i class="fas fa-circle-dot text-blue-500 mr-2"></i> Primary-type headache
+                        </button>
+                        <button class="hannah-headache-type px-6 py-4 bg-blue-100 border border-blue-300 rounded-lg text-left hover:bg-blue-200 transition-colors font-semibold" data-option="secondary">
+                            <i class="fas fa-circle-dot text-blue-500 mr-2"></i> Secondary-type headache
+                        </button>
                     </div>
-                    <p class="mt-6 text-lg">Great job on completing this case! You've demonstrated excellent clinical reasoning skills.</p>
+                    <div id="hannah-headache-feedback" class="mt-4 p-4 rounded-lg font-semibold hidden"></div>
                 `
             },
-            { type: 'hannah-decision-point-1', title: 'Decision Point', content: `<p class="mb-4">Considering the patient's situation, use your understanding of the clues or pertinent positives or negatives from the subjective information in the case to determine your top four differential diagnoses, with one of those differentials including a secondary type of headache.</p><p class="font-bold mb-2">Top differential diagnoses:</p><div class="space-y-3 mt-4"><label class="flex items-center gap-3"><input type="checkbox" name="hannah-dx" value="depression" class="h-5 w-5"> Depression</label><label class="flex items-center gap-3"><input type="checkbox" name="hannah-dx" value="cluster" class="h-5 w-5"> Cluster headache</label><label class="flex items-center gap-3"><input type="checkbox" name="hannah-dx" value="medication" class="h-5 w-5"> Medication overuse headache</label><label class="flex items-center gap-3"><input type="checkbox" name="hannah-dx" value="meningitis" class="h-5 w-5"> Meningitis</label><label class="flex items-center gap-3"><input type="checkbox" name="hannah-dx" value="migraine" class="h-5 w-5"> Migraine with aura</label><label class="flex items-center gap-3"><input type="checkbox" name="hannah-dx" value="madcow" class="h-5 w-5"> Mad cow disease</label><label class="flex items-center gap-3"><input type="checkbox" name="hannah-dx" value="space" class="h-5 w-5"> Space occupying lesion</label><label class="flex items-center gap-3"><input type="checkbox" name="hannah-dx" value="tension" class="h-5 w-5"> Tension type headache</label><label class="flex items-center gap-3"><input type="checkbox" name="hannah-dx" value="temporal" class="h-5 w-5"> Temporal arteritis</label></div><div id="hannah-dx-feedback" class="mt-4 text-center font-semibold hidden"></div>` },
-            { type: 'hannah-physical-assessment', title: 'Physical Assessment', content: `<div class="space-y-4"><div><p class="font-bold">Vitals:</p><p>BP 120/80, HR 75, Temp 37.0 C oral, RR 16 and regular</p></div><div><p class="font-bold">General Appearance:</p><p>Appears well, no visible signs of distress. Good hygiene and appropriate dress.</p></div><div><p class="font-bold">Skin:</p><p>Flesh, warm, dry, no visible rashes</p></div><div><p class="font-bold">HEENT:</p><p>no pain or tenderness to head/face. TMs clear bilaterally. Mouth moist, no exudate or erythema. Eyes. Sclera white, no injection, positive red reflex, disks clear and sharp. EOMI. PERRLA 4mm.</p></div><div><p class="font-bold">Chest:</p><p>Clear anteriorly and posteriorly.</p></div><div><p class="font-bold">Heart:</p><p>HS S1S2 regular, no extra sounds or murmurs.</p></div><div><p class="font-bold">Abdomen:</p><p>Soft, bowel sounds present, no obvious masses or organomegaly.</p></div><div><p class="font-bold">Neurological/Musculoskeletal:</p><p>No focal deficits. Cranial nerves II through XII grossly intact. Strength +5 bilaterally, cerebellar function and sensation intact. Deep Tendon Reflexes: +2 bilaterally. Steady gait, Romberg negative with no pronator drift.</p></div></div>` },
-            { type: 'hannah-decision-point-2', title: 'Decision Point', content: `<p class="mb-4">Considering the patient's situation, determine your working primary differential followed by three less likely differentials in order of likelihood.</p><div class="mb-6"><p class="font-semibold mb-2">Options:</p><p>1 - Medication overuse headache</p><p>2 - Cluster headache</p><p>3 - Tension type headache</p><p>4 - Migraine headache with aura</p></div><p class="font-bold mb-2">Enter the order below: (Ex. 5678)</p><input type="text" id="order-input" class="w-32 px-3 py-2 border border-gray-300 rounded-lg text-center text-xl font-bold" maxlength="4" placeholder="____"><div id="order-feedback" class="mt-4 text-center font-semibold hidden"></div><button id="submit-order" class="mt-4 px-6 py-3 bg-green-500 text-white rounded-lg font-semibold shadow-md hover:bg-green-600 transition-colors">Submit Order</button>` },
-            { type: 'hannah-congratulations', title: 'Congratulations!', content: `<p class="mb-4">Congratulations on narrowing your differentials to include a working diagnosis of migraine headache with aura with differential diagnosis of medication overuse headache, tension-type headache, and cluster headache.</p><p class="mb-4">We have added another challenge for you to complete, to illustrate the clinical diagnostic reasoning and decision-making accounting for the prioritization of these differential diagnoses.</p><p class="font-bold mb-4">You must select the best answer for each question.</p>` },
-            { type: 'hannah-quiz-1', title: 'Clinical Reasoning Challenge', content: `<div class="space-y-6"><div><p class="font-bold mb-2">Migraine with aura: Pertinent positive findings</p><div class="space-y-2"><label class="flex items-center"><input type="radio" name="quiz1" value="A" class="mr-2"> A - Pertinent positive findings include headaches that last roughly 10 to 72 hours, start gradually and progress over time, moderate to severe intensity, unilateral presentation, throbbing character, preceded by an aura, associated with nausea, phonophobia, photophobia, possibly triggered by chocolate, caffeine, stress, menstrual cycle, no red flag features, normal physical examination. Family hx of migraine headaches.</label><label class="flex items-center"><input type="radio" name="quiz1" value="B" class="mr-2"> B - Pertinent positive findings include female biological sex, headaches occurring on 15 or more days per months +/- a pre-existing headache disorder not yet diagnosed, smoking history, regular intake of Tylenol and Advil for ≥15 days per month for >3 months, nausea, no red flag features, normal physical exam.</label><label class="flex items-center"><input type="radio" name="quiz1" value="C" class="mr-2"> C - Pertinent positive findings include headaches that last roughly 10 to 72 hours, start gradually and progress over time, present following a stressful day at work.</label><label class="flex items-center"><input type="radio" name="quiz1" value="D" class="mr-2"> D - Pertinent positive findings include unilateral headache presentation and severe intensity.</label></div></div><div id="quiz1-feedback" class="text-center font-semibold hidden"></div><button id="submit-quiz1" class="px-6 py-3 bg-green-500 text-white rounded-lg font-semibold shadow-md hover:bg-green-600 transition-colors">Submit Answer</button></div>` },
-            { type: 'hannah-quiz-2', title: 'Clinical Reasoning Challenge', content: `<div class="space-y-6"><div><p class="font-bold mb-2">Medication overuse headache: Pertinent positive findings</p><div class="space-y-2"><label class="flex items-center"><input type="radio" name="quiz2" value="A" class="mr-2"> A - Pertinent positive findings include unilateral headache presentation and severe intensity.</label><label class="flex items-center"><input type="radio" name="quiz2" value="B" class="mr-2"> B - Pertinent positive findings include female biological sex, headaches occurring on 15 or more days per months +/- a pre-existing headache disorder not yet diagnosed, smoking history, regular intake of Tylenol and Advil for ≥15 days per month for >3 months, nausea, no red flag features, normal physical exam.</label><label class="flex items-center"><input type="radio" name="quiz2" value="C" class="mr-2"> C - Pertinent positive findings include headaches that last roughly 10 to 72 hours, start gradually and progress over time, present following a stressful day at work.</label><label class="flex items-center"><input type="radio" name="quiz2" value="D" class="mr-2"> D - Pertinent positive findings include headaches that last roughly 10 to 72 hours, start gradually and progress over time, moderate to severe intensity, unilateral presentation, throbbing character, preceded by an aura.</label></div></div><div id="quiz2-feedback" class="text-center font-semibold hidden"></div><button id="submit-quiz2" class="px-6 py-3 bg-green-500 text-white rounded-lg font-semibold shadow-md hover:bg-green-600 transition-colors">Submit Answer</button></div>` },
-            { type: 'hannah-quiz-3', title: 'Clinical Reasoning Challenge', content: `<div class="space-y-6"><div><p class="font-bold mb-2">Tension-type headaches: Pertinent positive findings</p><div class="space-y-2"><label class="flex items-center"><input type="radio" name="quiz3" value="A" class="mr-2"> A - Pertinent positive findings include headaches that last roughly 10 to 72 hours, start gradually and progress over time, moderate to severe intensity, unilateral presentation, throbbing character, preceded by an aura.</label><label class="flex items-center"><input type="radio" name="quiz3" value="B" class="mr-2"> B - Pertinent positive findings include headaches that last roughly 10 to 72 hours, start gradually and progress over time, present following a stressful day at work. Review of systems negative with no red flag features.</label><label class="flex items-center"><input type="radio" name="quiz3" value="C" class="mr-2"> C - Pertinent positive findings include unilateral headache presentation and severe intensity.</label><label class="flex items-center"><input type="radio" name="quiz3" value="D" class="mr-2"> D - Pertinent positive findings include female biological sex, headaches occurring on 15 or more days per months, smoking history, regular intake of Tylenol and Advil.</label></div></div><div id="quiz3-feedback" class="text-center font-semibold hidden"></div><button id="submit-quiz3" class="px-6 py-3 bg-green-500 text-white rounded-lg font-semibold shadow-md hover:bg-green-600 transition-colors">Submit Answer</button></div>` },
-            { type: 'hannah-quiz-4', title: 'Clinical Reasoning Challenge', content: `<div class="space-y-6"><div><p class="font-bold mb-2">Cluster headache: Pertinent positive findings</p><div class="space-y-2"><label class="flex items-center"><input type="radio" name="quiz4" value="A" class="mr-2"> A - Pertinent positive findings include headaches that last roughly 10 to 72 hours, start gradually and progress over time, present following a stressful day at work.</label><label class="flex items-center"><input type="radio" name="quiz4" value="B" class="mr-2"> B - Pertinent positive findings include headaches that last roughly 10 to 72 hours, start gradually and progress over time, moderate to severe intensity, unilateral presentation, throbbing character, preceded by an aura.</label><label class="flex items-center"><input type="radio" name="quiz4" value="C" class="mr-2"> C - Pertinent positive findings include female biological sex, headaches occurring on 15 or more days per months, smoking history, regular intake of Tylenol and Advil.</label><label class="flex items-center"><input type="radio" name="quiz4" value="D" class="mr-2"> D - Pertinent positive findings include unilateral headache presentation and severe intensity.</label></div></div><div id="quiz4-feedback" class="text-center font-semibold hidden"></div><button id="submit-quiz4" class="px-6 py-3 bg-green-500 text-white rounded-lg font-semibold shadow-md hover:bg-green-600 transition-colors">Submit Answer</button></div>` },
+
             {
+                type: 'section-banner-hannah-2',
+                title: 'Section 2: Differential Diagnosis & Management Planning',
+                content: `
+                    <div class="text-center py-6">
+                        <div class="inline-flex items-center justify-center w-16 h-16 bg-green-600 rounded-2xl mb-4">
+                            <i class="fas fa-stethoscope text-white text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-extrabold text-gray-800 mb-2">Section 2</h2>
+                        <h3 class="text-2xl font-bold text-green-800 mb-3">Differential Diagnosis & Management Planning</h3>
+                        <p class="text-gray-600 text-lg max-w-lg mx-auto">Work through clinical decision points and reasoning for Hannah's case.</p>
+                    </div>
+                    <div class="mt-4 p-4 bg-green-50 border border-green-200 rounded-xl text-center">
+                        <p class="text-sm text-green-800 font-medium">Click <strong>Next</strong> to begin this section.</p>
+                    </div>
+                `
+            },
+{ type: 'hannah-decision-point-1', title: 'Decision Point', content: `<p class="mb-4">Considering the patient's situation, use your understanding of the clues or pertinent positives or negatives from the subjective information in the case to determine your top four differential diagnoses, with one of those differentials including a secondary type of headache.</p><p class="font-bold mb-2">Top differential diagnoses:</p><div class="space-y-3 mt-4"><label class="flex items-center gap-3"><input type="checkbox" name="hannah-dx" value="depression" class="h-5 w-5"> Depression</label><label class="flex items-center gap-3"><input type="checkbox" name="hannah-dx" value="cluster" class="h-5 w-5"> Cluster headache</label><label class="flex items-center gap-3"><input type="checkbox" name="hannah-dx" value="medication" class="h-5 w-5"> Medication overuse headache</label><label class="flex items-center gap-3"><input type="checkbox" name="hannah-dx" value="meningitis" class="h-5 w-5"> Meningitis</label><label class="flex items-center gap-3"><input type="checkbox" name="hannah-dx" value="migraine" class="h-5 w-5"> Migraine with aura</label><label class="flex items-center gap-3"><input type="checkbox" name="hannah-dx" value="madcow" class="h-5 w-5"> Mad cow disease</label><label class="flex items-center gap-3"><input type="checkbox" name="hannah-dx" value="space" class="h-5 w-5"> Space occupying lesion</label><label class="flex items-center gap-3"><input type="checkbox" name="hannah-dx" value="tension" class="h-5 w-5"> Tension type headache</label><label class="flex items-center gap-3"><input type="checkbox" name="hannah-dx" value="temporal" class="h-5 w-5"> Temporal arteritis</label></div><div id="hannah-dx-feedback" class="mt-4 text-center font-semibold hidden"></div>` },
+
+{ type: 'hannah-physical-assessment', title: 'Physical Assessment', content: `<div class="space-y-4"><div><p class="font-bold">Vitals:</p><p>BP 120/80, HR 75, Temp 37.0 C oral, RR 16 and regular</p></div><div><p class="font-bold">General Appearance:</p><p>Appears well, no visible signs of distress. Good hygiene and appropriate dress.</p></div><div><p class="font-bold">Skin:</p><p>Flesh, warm, dry, no visible rashes</p></div><div><p class="font-bold">HEENT:</p><p>no pain or tenderness to head/face. TMs clear bilaterally. Mouth moist, no exudate or erythema. Eyes. Sclera white, no injection, positive red reflex, disks clear and sharp. EOMI. PERRLA 4mm.</p></div><div><p class="font-bold">Chest:</p><p>Clear anteriorly and posteriorly.</p></div><div><p class="font-bold">Heart:</p><p>HS S1S2 regular, no extra sounds or murmurs.</p></div><div><p class="font-bold">Abdomen:</p><p>Soft, bowel sounds present, no obvious masses or organomegaly.</p></div><div><p class="font-bold">Neurological/Musculoskeletal:</p><p>No focal deficits. Cranial nerves II through XII grossly intact. Strength +5 bilaterally, cerebellar function and sensation intact. Deep Tendon Reflexes: +2 bilaterally. Steady gait, Romberg negative with no pronator drift.</p></div></div>` },
+
+{ type: 'hannah-decision-point-2', title: 'Decision Point', content: `<p class="mb-4">Considering the patient's situation, determine your working primary differential followed by three less likely differentials in order of likelihood.</p><div class="mb-6"><p class="font-semibold mb-2">Options:</p><p>1 - Medication overuse headache</p><p>2 - Cluster headache</p><p>3 - Tension type headache</p><p>4 - Migraine headache with aura</p></div><p class="font-bold mb-2">Enter the order below: (Ex. 5678)</p><input type="text" id="order-input" class="w-32 px-3 py-2 border border-gray-300 rounded-lg text-center text-xl font-bold" maxlength="4" placeholder="____"><div id="order-feedback" class="mt-4 text-center font-semibold hidden"></div><button id="submit-order" class="mt-4 px-6 py-3 bg-green-500 text-white rounded-lg font-semibold shadow-md hover:bg-green-600 transition-colors">Submit Order</button>` },
+
+{
+                type: 'hannah-congratulations',
+                title: 'Congratulations!',
+                content: `
+                    <p class="mb-4">Congratulations on narrowing your differentials to include a working diagnosis of migraine headache with aura with differential diagnosis of medication overuse headache, tension-type headache, and cluster headache.</p>
+                    <p class="mb-4">We have added another challenge for you to complete, to illustrate the clinical diagnostic reasoning and decision-making accounting for the prioritization of these differential diagnoses.</p>
+                    <p class="font-bold mb-4">You must select the best answer for each question.</p>
+                    <div class="mt-6 p-5 bg-blue-50 border border-blue-200 rounded-xl">
+                        <h3 class="text-lg font-bold text-blue-800 mb-3">&#128203; Key Learning Points</h3>
+                        <ul class="space-y-3 text-sm text-blue-900">
+                            <li class="flex items-start gap-2"><span class="text-blue-500 font-bold mt-0.5">&#8226;</span><span>Hannah's headaches are most consistent with <strong>migraine with aura</strong> — characterised by unilateral throbbing pain, preceding visual aura (zigzag patterns), facial tingling, photophobia, and phonophobia.</span></li>
+                            <li class="flex items-start gap-2"><span class="text-blue-500 font-bold mt-0.5">&#8226;</span><span><strong>Medication overuse headache</strong> must always be considered when a patient is using analgesics (e.g. Tylenol, Advil) on 15 or more days per month — Hannah's pattern warrants close monitoring.</span></li>
+                            <li class="flex items-start gap-2"><span class="text-blue-500 font-bold mt-0.5">&#8226;</span><span><strong>Tension-type headache</strong> remains a differential but is less likely given the unilateral, throbbing nature and presence of aura in Hannah's presentation.</span></li>
+                            <li class="flex items-start gap-2"><span class="text-blue-500 font-bold mt-0.5">&#8226;</span><span><strong>Cluster headache</strong> is the least likely differential — it predominantly affects males and typically presents with severe unilateral periorbital pain alongside autonomic features, which Hannah does not have.</span></li>
+                            <li class="flex items-start gap-2"><span class="text-blue-500 font-bold mt-0.5">&#8226;</span><span>Use pertinent <strong>positive and negative findings</strong> to systematically rank differentials — this is the foundation of evidence-based clinical reasoning.</span></li>
+                        </ul>
+                    </div>
+                `
+            },
+
+            {
+                type: 'section-banner-hannah-3',
+                title: 'Section 3: Interactive Learning Games & Challenges',
+                content: `
+                    <div class="text-center py-6">
+                        <div class="inline-flex items-center justify-center w-16 h-16 bg-purple-600 rounded-2xl mb-4">
+                            <i class="fas fa-gamepad text-white text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-extrabold text-gray-800 mb-2">Section 3</h2>
+                        <h3 class="text-2xl font-bold text-purple-800 mb-3">Interactive Learning Games & Challenges</h3>
+                        <p class="text-gray-600 text-lg max-w-lg mx-auto">Complete the clinical reasoning challenges for Hannah's case.</p>
+                    </div>
+                    <div class="mt-4 p-4 bg-purple-50 border border-purple-200 rounded-xl text-center">
+                        <p class="text-sm text-purple-800 font-medium">Click <strong>Next</strong> to begin this section.</p>
+                    </div>
+                `
+            },
+{ type: 'hannah-quiz-1', title: 'Clinical Reasoning Challenge', content: `<div class="space-y-6"><div><p class="font-bold mb-2">Migraine with aura: Pertinent positive findings</p><div class="space-y-2"><label class="flex items-center"><input type="radio" name="quiz1" value="A" class="mr-2"> A - Pertinent positive findings include headaches that last roughly 10 to 72 hours, start gradually and progress over time, moderate to severe intensity, unilateral presentation, throbbing character, preceded by an aura, associated with nausea, phonophobia, photophobia, possibly triggered by chocolate, caffeine, stress, menstrual cycle, no red flag features, normal physical examination. Family hx of migraine headaches.</label><label class="flex items-center"><input type="radio" name="quiz1" value="B" class="mr-2"> B - Pertinent positive findings include female biological sex, headaches occurring on 15 or more days per months +/- a pre-existing headache disorder not yet diagnosed, smoking history, regular intake of Tylenol and Advil for ≥15 days per month for >3 months, nausea, no red flag features, normal physical exam.</label><label class="flex items-center"><input type="radio" name="quiz1" value="C" class="mr-2"> C - Pertinent positive findings include headaches that last roughly 10 to 72 hours, start gradually and progress over time, present following a stressful day at work.</label><label class="flex items-center"><input type="radio" name="quiz1" value="D" class="mr-2"> D - Pertinent positive findings include unilateral headache presentation and severe intensity.</label></div></div><div id="quiz1-feedback" class="text-center font-semibold hidden"></div><button id="submit-quiz1" class="px-6 py-3 bg-green-500 text-white rounded-lg font-semibold shadow-md hover:bg-green-600 transition-colors">Submit Answer</button></div>` },
+
+{ type: 'hannah-quiz-2', title: 'Clinical Reasoning Challenge', content: `<div class="space-y-6"><div><p class="font-bold mb-2">Medication overuse headache: Pertinent positive findings</p><div class="space-y-2"><label class="flex items-center"><input type="radio" name="quiz2" value="A" class="mr-2"> A - Pertinent positive findings include unilateral headache presentation and severe intensity.</label><label class="flex items-center"><input type="radio" name="quiz2" value="B" class="mr-2"> B - Pertinent positive findings include female biological sex, headaches occurring on 15 or more days per months +/- a pre-existing headache disorder not yet diagnosed, smoking history, regular intake of Tylenol and Advil for ≥15 days per month for >3 months, nausea, no red flag features, normal physical exam.</label><label class="flex items-center"><input type="radio" name="quiz2" value="C" class="mr-2"> C - Pertinent positive findings include headaches that last roughly 10 to 72 hours, start gradually and progress over time, present following a stressful day at work.</label><label class="flex items-center"><input type="radio" name="quiz2" value="D" class="mr-2"> D - Pertinent positive findings include headaches that last roughly 10 to 72 hours, start gradually and progress over time, moderate to severe intensity, unilateral presentation, throbbing character, preceded by an aura.</label></div></div><div id="quiz2-feedback" class="text-center font-semibold hidden"></div><button id="submit-quiz2" class="px-6 py-3 bg-green-500 text-white rounded-lg font-semibold shadow-md hover:bg-green-600 transition-colors">Submit Answer</button></div>` },
+
+{ type: 'hannah-quiz-3', title: 'Clinical Reasoning Challenge', content: `<div class="space-y-6"><div><p class="font-bold mb-2">Tension-type headaches: Pertinent positive findings</p><div class="space-y-2"><label class="flex items-center"><input type="radio" name="quiz3" value="A" class="mr-2"> A - Pertinent positive findings include headaches that last roughly 10 to 72 hours, start gradually and progress over time, moderate to severe intensity, unilateral presentation, throbbing character, preceded by an aura.</label><label class="flex items-center"><input type="radio" name="quiz3" value="B" class="mr-2"> B - Pertinent positive findings include headaches that last roughly 10 to 72 hours, start gradually and progress over time, present following a stressful day at work. Review of systems negative with no red flag features.</label><label class="flex items-center"><input type="radio" name="quiz3" value="C" class="mr-2"> C - Pertinent positive findings include unilateral headache presentation and severe intensity.</label><label class="flex items-center"><input type="radio" name="quiz3" value="D" class="mr-2"> D - Pertinent positive findings include female biological sex, headaches occurring on 15 or more days per months, smoking history, regular intake of Tylenol and Advil.</label></div></div><div id="quiz3-feedback" class="text-center font-semibold hidden"></div><button id="submit-quiz3" class="px-6 py-3 bg-green-500 text-white rounded-lg font-semibold shadow-md hover:bg-green-600 transition-colors">Submit Answer</button></div>` },
+
+{ type: 'hannah-quiz-4', title: 'Clinical Reasoning Challenge', content: `<div class="space-y-6"><div><p class="font-bold mb-2">Cluster headache: Pertinent positive findings</p><div class="space-y-2"><label class="flex items-center"><input type="radio" name="quiz4" value="A" class="mr-2"> A - Pertinent positive findings include headaches that last roughly 10 to 72 hours, start gradually and progress over time, present following a stressful day at work.</label><label class="flex items-center"><input type="radio" name="quiz4" value="B" class="mr-2"> B - Pertinent positive findings include headaches that last roughly 10 to 72 hours, start gradually and progress over time, moderate to severe intensity, unilateral presentation, throbbing character, preceded by an aura.</label><label class="flex items-center"><input type="radio" name="quiz4" value="C" class="mr-2"> C - Pertinent positive findings include female biological sex, headaches occurring on 15 or more days per months, smoking history, regular intake of Tylenol and Advil.</label><label class="flex items-center"><input type="radio" name="quiz4" value="D" class="mr-2"> D - Pertinent positive findings include unilateral headache presentation and severe intensity.</label></div></div><div id="quiz4-feedback" class="text-center font-semibold hidden"></div><button id="submit-quiz4" class="px-6 py-3 bg-green-500 text-white rounded-lg font-semibold shadow-md hover:bg-green-600 transition-colors">Submit Answer</button></div>` },
+
+{
                 type: 'hannah-final-congrats',
                 title: 'Excellent Work!',
                 content: `
@@ -1120,11 +1326,19 @@
                             <h3 class="text-2xl font-bold text-green-800 mb-4">Case Summary</h3>
                             <p class="text-green-700">Your clinical reasoning skills helped identify the correct diagnosis and understand the pertinent findings for each differential diagnosis.</p>
                         </div>
-                        <button id="next-anna-button" class="mt-6 px-8 py-4 bg-green-500 text-white rounded-lg font-semibold shadow-md hover:bg-green-600 transition-colors transform hover:scale-105">Next Patient</button>
+                        <div class="mt-6 p-5 bg-blue-50 border border-blue-200 rounded-xl text-left">
+                            <h3 class="text-lg font-bold text-blue-800 mb-3">&#127942; You have completed all three patient cases!</h3>
+                            <p class="text-blue-700 text-sm">You've worked through Anna Jacobs, Tyler Haley, and Hannah Howard. Don't forget to download your certificate of completion and upload it to your Moodle course shell.</p>
+                        </div>
+                        <div class="mt-6 text-center">
+                            <img src="https://placehold.co/500x350?text=Certificate+of+Completion" alt="Certificate of Completion" class="mx-auto rounded-lg shadow-md max-w-full">
+                            <p class="text-sm text-gray-500 mt-2 italic">Certificate of Completion — Hannah Howard Case</p>
+                        </div>
                     </div>
                 `
             }
-        ];
+
+                ];
 
         // =====================================================================
         // ANNA JACOBS PATIENT STEPS (NEW)
@@ -1148,7 +1362,7 @@
             },
             {
                 type: 'anna-basic-info',
-                title: 'Basic and Surgical Information Learned!',
+                title: 'History of Present Illness and Past Medical History Learned',
                 content: `
                     <p class="mb-4 p-3 bg-green-50 text-green-700 font-semibold rounded-lg">Good job! You kindly introduced yourself to your patient and you learned about their general information.</p>
                     <p class="text-lg font-semibold">Name: Anna Jacobs</p>
@@ -1157,7 +1371,7 @@
                     <p class="mt-4 font-bold">Chief Complaint: Headaches</p>
                     <p class="italic mt-2">Patient Quote:</p>
                     <blockquote class="bg-gray-100 p-4 rounded-lg border-l-4 border-gray-400 mt-2">
-                        "I've been having these headaches on and off for about 3-4 months. I get them maybe 2-3 times a week and they last roughly 3-5 hours. They start light and gradually get worse over time. It sometimes feels like a tight band across my forehead, it doesn't feel like a radiating pain. At its worse it is about a 4-5 on a pain scale, 10 being the worst pain I have ever felt. I'm not 100% sure what causes it but it seems to happen after a long and stressful day at work. It seems to get better with rest, relaxation or two tablets of Tylenol or Advil."
+                        "I've been having these headaches on and off for about 3-4 months. I get them maybe 2-3 times a week and they last roughly 3-5 hours. They start light and gradually get worse over time. It sometimes feels like a tight band across my forehead, it doesn't feel like a radiating pain. At its worse it is about a 4-5 out of 10 on a pain scale. I'm not 100% sure what causes it but it seems to happen after a long and stressful day at work. It seems to get better with rest, relaxation or two tablets of Tylenol or Advil."
                     </blockquote>
                     <p class="mt-4 font-bold">Associated Symptoms:</p>
                     <p>Muscle tightness to shoulders intermittently, no other notable associated symptoms.</p>
@@ -1263,209 +1477,8 @@
                         <div id="anna-action-feedback" class="mt-4 text-center font-semibold hidden"></div>
                     </div>
                 `
-            },
-            {
-                type: 'anna-headache-intro',
-                title: 'Clinical Reasoning: Primary Headaches',
-                content: `
-                    <p class="text-gray-700 leading-relaxed">Good job in continuing to evaluate the cause of Anna's headaches. Next you'll find a quiz focusing on the characteristics of primary headaches. You will have to click the type of headache that matches with the characteristic/symptom listed.</p>
-                    <p class="mt-4 text-gray-700 leading-relaxed">This knowledge will prove crucial for an upcoming part of the assignment. Understanding the distinct features of various primary headaches will aid us in diagnosing Anna's headaches.</p>
-                    <div class="mt-6 p-5 bg-blue-50 rounded-lg border border-blue-200">
-                        <h3 class="text-lg font-bold text-blue-800 mb-2">&#128203; What's Coming Next:</h3>
-                        <p class="text-blue-700">A headache classification quiz — for each symptom or characteristic shown, click the matching headache type: <strong>Tension Headache</strong>, <strong>Migraine</strong>, or <strong>Cluster Headache</strong>.</p>
-                    </div>
-                    <p class="mt-6 text-blue-600 font-medium">Click 'Next' when you're ready to begin the quiz.</p>
-                `
             }
         ];
-
-        // =====================================================================
-        // UTILITY FUNCTIONS
-        // =====================================================================
-        function saveState() {
-            localStorage.setItem('correctCodesEntered', JSON.stringify(correctCodesEntered));
-            localStorage.setItem('enteredCodes', JSON.stringify(enteredCodes));
-            localStorage.setItem('activityScores', JSON.stringify(activityScores));
-            localStorage.setItem('mainTimeElapsed', mainTimeElapsed);
-            localStorage.setItem('currentQuestionIndex_activity2', currentQuestionIndex);
-            localStorage.setItem('activity2CorrectCount', activity2CorrectCount);
-            localStorage.setItem('inPatientChart', inPatientChart);
-            localStorage.setItem('currentChartStep', currentChartStep);
-            localStorage.setItem('inSecondPatient', inSecondPatient);
-            localStorage.setItem('currentSecondPatientStep', currentSecondPatientStep);
-            localStorage.setItem('inAnnaPatient', inAnnaPatient);
-            localStorage.setItem('currentAnnaStep', currentAnnaStep);
-            localStorage.setItem('caseTimers', JSON.stringify(caseTimers));
-            localStorage.setItem('caseTimerDone', JSON.stringify(caseTimerDone));
-            localStorage.setItem('activeCaseTimer', activeCaseTimer || '');
-        }
-
-        // =====================================================================
-        // STUDENT DATA TRACKING (Google Sheets + localStorage fallback)
-        // =====================================================================
-        const NER_PREFIX = 'ner_';
-
-        // *** REPLACE THIS URL after deploying your Google Apps Script ***
-        const SHEETS_URL = localStorage.getItem('ner_sheets_url') || 'https://script.google.com/macros/s/AKfycby1Tyf3MrFinkXFWqa-XXcBYzUFafB4etj3lH2QanK-K_cZCeAy1pMS2uWH5H2CivX_Ew/exec';
-
-        function getStudentName() {
-            return localStorage.getItem('ner_current_student') || 'Unknown Student';
-        }
-
-        // Post data to Google Sheets (fire-and-forget, with localStorage mirror)
-        function postToSheets(action, payload) {
-            if (!SHEETS_URL) return; // no URL configured yet — local only
-            fetch(SHEETS_URL, {
-                method: 'POST',
-                mode: 'no-cors', // required for Apps Script
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action, ...payload })
-            }).catch(() => {}); // silently fail — localStorage is the backup
-        }
-
-        function saveStudentCaseData(caseId, data) {
-            const student = getStudentName();
-            const key = `${NER_PREFIX}${student}_${caseId}`;
-            const existing = JSON.parse(localStorage.getItem(key) || '{}');
-            const merged = { ...existing, ...data, studentName: student, caseId, lastUpdated: new Date().toISOString() };
-            localStorage.setItem(key, JSON.stringify(merged));
-
-            // Mirror to Google Sheets
-            postToSheets('saveSession', { studentName: student, caseId, data: merged });
-
-            // If there are activity logs in this data, also post them
-            ['activity1Log','activity2Log','activity3Part1Log','activity3Part2Log','activity3Part3Log'].forEach(logKey => {
-                if (data[logKey]) {
-                    const topicMap = {
-                        activity1Log:      'Activity 1 — Headache Classification',
-                        activity2Log:      'Activity 2 — Red Flag MCQs',
-                        activity3Part1Log: 'Activity 3 Pt1 — Red/Green Flag Sort',
-                        activity3Part2Log: 'Activity 3 Pt2 — SNNOOP10 Fill-in',
-                        activity3Part3Log: 'Activity 3 Pt3 — True/False'
-                    };
-                    const mistakes = data[logKey]
-                        .filter(l => !l.wasCorrect)
-                        .map(l => ({ ...l, topic: topicMap[logKey] }));
-                    if (mistakes.length) {
-                        postToSheets('saveMistakes', { studentName: student, caseId, mistakes });
-                    }
-                }
-            });
-
-            // Post activity scores
-            const scoreMap = {
-                activity1Score: 'Activity 1',
-                activity2Score: 'Activity 2',
-                activity3Score: 'Activity 3'
-            };
-            Object.entries(scoreMap).forEach(([key, label]) => {
-                if (data[key]) {
-                    postToSheets('saveActivityScore', {
-                        studentName: student, caseId,
-                        activity: label, score: data[key]
-                    });
-                }
-            });
-        }
-
-        function markCaseStarted(caseId) {
-            const student = getStudentName();
-            saveStudentCaseData(caseId, { started: true, startedAt: new Date().toISOString() });
-        }
-
-        function markCaseCompleted(caseId, extraData = {}) {
-            saveStudentCaseData(caseId, {
-                completed: true,
-                caseTime: caseTimers[caseId] || 0,
-                completedAt: new Date().toISOString(),
-                ...extraData
-            });
-        }
-
-        function showModal(title, message) {
-            modalTitle.innerHTML = title;
-            modalMessage.innerHTML = message;
-            modal.classList.remove('hidden');
-        }
-
-        modalCloseBtn.onclick = () => { modal.classList.add('hidden'); };
-
-        function updateProgressBar() {
-            const completedActivities = Object.values(correctCodesEntered).filter(status => status).length;
-            const progress = (completedActivities / Object.keys(activityCodes).length) * 100;
-            progressBar.style.width = `${progress}%`;
-        }
-
-        function updateCodeInputStates() {
-            codeEntrySection.innerHTML = '';
-            Object.keys(activityCodes).forEach(activity => {
-                const codeGroup = document.createElement('div');
-                codeGroup.className = 'flex items-center gap-2';
-                const label = document.createElement('label');
-                label.className = 'text-base font-semibold w-24';
-                label.textContent = `Activity ${activity.slice(-1)}:`;
-                const input = document.createElement('input');
-                input.type = 'text';
-                input.maxLength = 10;
-                input.id = `code-input-${activity}`;
-                input.placeholder = 'ENTER CODE';
-                input.value = enteredCodes[activity];
-                input.className = 'w-full px-2 py-1 rounded-lg focus:outline-none';
-                if (correctCodesEntered[activity]) {
-                    input.classList.add('correct'); input.disabled = true;
-                } else if (enteredCodes[activity] && enteredCodes[activity].toUpperCase() === activityCodes[activity].toUpperCase()) {
-                    input.classList.add('correct'); input.disabled = true;
-                } else if (enteredCodes[activity].length > 0 && enteredCodes[activity].toUpperCase() !== activityCodes[activity].toUpperCase()) {
-                    input.classList.add('incorrect');
-                }
-                input.oninput = (e) => {
-                    const value = e.target.value.toUpperCase();
-                    enteredCodes[activity] = value;
-                    if (value === activityCodes[activity].toUpperCase()) {
-                        e.target.classList.remove('incorrect'); e.target.classList.add('correct'); e.target.disabled = true;
-                        correctCodesEntered[activity] = true;
-                        showModal('Code Unlocked!', `Code for Activity ${activity.slice(-1)} is correct!`);
-                        if (Object.values(correctCodesEntered).every(Boolean)) {
-                            showModal('Congratulations!', `All codes unlocked! You completed the escape room in ${formatTime(mainTimeElapsed)}!`);
-                            clearInterval(mainTimerInterval);
-                            renderStep();
-                        }
-                    } else if (value.length > 0) {
-                        e.target.classList.add('incorrect');
-                    } else {
-                        e.target.classList.remove('incorrect');
-                    }
-                    saveState(); updateProgressBar();
-                };
-                codeGroup.appendChild(label); codeGroup.appendChild(input);
-                codeEntrySection.appendChild(codeGroup);
-            });
-        }
-
-        function formatTime(seconds) {
-            const minutes = Math.floor(seconds / 60);
-            const remainingSeconds = seconds % 60;
-            return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
-        }
-
-        function startCaseTimer(caseName) {
-            if (activeCaseTimer === caseName) return; // already running
-            stopCaseTimer();
-            activeCaseTimer = caseName;
-            document.getElementById('case-timers').classList.remove('hidden');
-            // Mark as active
-            ['anna','tyler','hannah'].forEach(c => {
-                const badge = document.getElementById(`timer-${c}`);
-                badge.classList.remove('active','done');
-                if (caseTimerDone[c]) badge.classList.add('done');
-                else if (c === caseName) badge.classList.add('active');
-            });
-            caseTimerInterval = setInterval(() => {
-                caseTimers[caseName]++;
-                updateCaseTimerDisplay();
-                saveState();
-            }, 1000);
-        }
 
         function stopCaseTimer() {
             if (caseTimerInterval) { clearInterval(caseTimerInterval); caseTimerInterval = null; }
@@ -1520,7 +1533,19 @@
             else mc.classList.remove('activity-mode');
         }
 
-        function renderIntroStep(step) {
+        function renderSectionBanner(step) {
+            setActivityMode(false);
+            contentArea.innerHTML = `
+                <section class="flex flex-col gap-4">
+                    <h2 class="text-2xl font-bold text-gray-800">${step.title}</h2>
+                    <div class="p-4 bg-white rounded-lg">${step.content}</div>
+                </section>
+            `;
+            backButton.classList.add('hidden');
+            nextButton.classList.remove('hidden');
+        }
+
+                function renderIntroStep(step) {
             contentArea.innerHTML = `
                 <section class="text-center">
                     <h2 class="text-3xl font-bold text-gray-800">${step.title}</h2>
@@ -1684,14 +1709,16 @@
                     <section class="flex flex-col gap-4">
                         <h2 class="text-2xl font-bold text-gray-800">Activity 1 Complete! 🎉</h2>
                         <p class="text-gray-600">You scored <strong>${correctCount} / ${shuffled.length}</strong> correct placements.</p>
-                        <div class="p-4 bg-blue-50 rounded-lg border border-blue-200 mb-2">
-                            <p class="font-bold text-blue-800">🔑 Your code: <span class="text-2xl tracking-widest">${activityCodes.activity1}</span></p>
+                        <div class="p-6 bg-yellow-400 border-4 border-yellow-600 rounded-2xl mb-4 text-center shadow-xl">
+                            <p class="text-2xl font-extrabold text-gray-900 mb-1">🔑 ACTIVITY 1 CODE</p>
+                            <p class="text-5xl font-black tracking-widest text-gray-900 font-mono my-3">${activityCodes.activity1}</p>
+                            <p class="text-gray-800 font-bold text-base">✏️ WRITE THIS DOWN NOW — you will need it to unlock Case 2!</p>
                         </div>
                         <h3 class="text-xl font-bold text-gray-800 mt-2">Review</h3>
                         <div>${reviewRows}</div>
                     </section>
                 `;
-                showModal('Activity 1 Complete!', `Score: ${correctCount}/${shuffled.length}. Your code is: <strong>${activityCodes.activity1}</strong>`);
+// code shown inline — no modal needed
                 nextButton.classList.remove('hidden');
             }
         }
@@ -1742,15 +1769,15 @@
                             btn.disabled = true; btn.classList.remove('hover:bg-slate-600');
                         });
                         const isCorrect = index === question.correctAnswer;
+                        // Always highlight correct answer green
+                        document.querySelectorAll('#options-container button')[question.correctAnswer]
+                            .classList.add('bg-green-600', 'border-green-400', 'font-bold');
                         if (isCorrect) {
                             quizFeedback.innerHTML = '<span class="text-green-400 text-lg">✅ Correct!</span>';
-                            button.classList.add('bg-green-600', 'border-green-400', 'font-bold');
                             activity2CorrectCount++; activityScores.activity2.correct = activity2CorrectCount;
                         } else {
-                            quizFeedback.innerHTML = '<span class="text-red-400 text-lg">❌ Incorrect!</span>';
+                            quizFeedback.innerHTML = '<span class="text-red-400 text-lg">❌ Incorrect! The correct answer is highlighted in green.</span>';
                             button.classList.add('bg-red-700', 'border-red-400');
-                            document.querySelectorAll('#options-container button')[question.correctAnswer]
-                                .classList.add('bg-green-600', 'border-green-400', 'font-bold');
                         }
                         act2Log.push({ question: question.question, chosen: option, correct: question.options[question.correctAnswer], wasCorrect: isCorrect });
                         saveState();
@@ -1789,7 +1816,8 @@
                     <div class="review-card ${l.wasCorrect ? 'correct-review' : 'incorrect-review'} p-3 rounded-lg mb-2">
                         <p class="font-semibold text-gray-800 text-sm mb-1">Q${i+1}: ${l.question}</p>
                         ${l.wasCorrect
-                            ? `<p class="text-sm text-green-700">✅ You answered: <strong>${l.chosen}</strong></p>`
+                            ? `<p class="text-sm text-green-700">✅ You answered: <strong>${l.chosen}</strong></p>
+                               <p class="text-sm text-gray-600 mt-1 italic">💡 ${act2Explanations[i] || ''}</p>`
                             : `<p class="text-sm text-red-700">❌ You answered: <strong>${l.chosen}</strong></p>
                                <p class="text-sm text-green-700">✅ Correct answer: <strong>${l.correct}</strong></p>
                                <p class="text-sm text-gray-600 mt-1 italic">💡 ${act2Explanations[i] || 'Review red flag criteria for secondary headaches.'}</p>`
@@ -1800,8 +1828,10 @@
                     <section class="flex flex-col gap-4">
                         <h2 class="text-2xl font-bold text-gray-800">Activity 2 Complete! 🎉</h2>
                         <p class="text-gray-600">You scored <strong>${correctCount} / ${log.length}</strong> correct.</p>
-                        <div class="p-4 bg-blue-50 rounded-lg border border-blue-200 mb-2">
-                            <p class="font-bold text-blue-800">🔑 Your code: <span class="text-2xl tracking-widest">${activityCodes.activity2}</span></p>
+                        <div class="p-6 bg-yellow-400 border-4 border-yellow-600 rounded-2xl mb-4 text-center shadow-xl">
+                            <p class="text-2xl font-extrabold text-gray-900 mb-1">🔑 ACTIVITY 2 CODE</p>
+                            <p class="text-5xl font-black tracking-widest text-gray-900 font-mono my-3">${activityCodes.activity2}</p>
+                            <p class="text-gray-800 font-bold text-base">✏️ WRITE THIS DOWN NOW — you will need it to unlock Case 2!</p>
                         </div>
                         <h3 class="text-xl font-bold text-gray-800 mt-2">Review</h3>
                         <div>${rows}</div>
@@ -1811,7 +1841,7 @@
                     correctCodesEntered.activity2 = true; enteredCodes.activity2 = activityCodes.activity2;
                     updateCodeInputStates(); saveState();
                 }
-                showModal('Activity 2 Complete!', `Score: ${correctCount}/${log.length}. Your code is: <strong>${activityCodes.activity2}</strong>`);
+// code shown inline — no modal needed
                 nextButton.classList.remove('hidden');
             }
 
@@ -1926,7 +1956,10 @@
                                 </div>
                                 <div id="answer-feedback" class="mt-3 font-semibold"></div>
                                 <div id="answer-hint" class="mt-2 text-sm text-yellow-300 hidden">💡 Hint: ${question.hint}</div>
-                                <button id="next-p2-btn" class="mt-4 px-6 py-3 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 hidden">Next Question →</button>
+                                <div class="flex gap-3 mt-4 flex-wrap">
+                                    <button id="next-p2-btn" class="px-6 py-3 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 hidden">${currentQuestion + 1 < step.parts.part2.questions.length ? 'Next Question →' : 'Continue to Part 3 →'}</button>
+                                    <button id="skip-p2-btn" class="px-4 py-3 bg-slate-600 text-slate-300 rounded-lg text-sm hover:bg-slate-500 transition-colors">⏭ Skip this question</button>
+                                </div>
                                 <div class="mt-4 text-blue-400 text-sm">Progress: ${currentQuestion} / ${step.parts.part2.questions.length}</div>
                             </div>
                         </section>
@@ -1935,18 +1968,25 @@
                     const feedbackDiv = document.getElementById('answer-feedback');
                     const hintDiv = document.getElementById('answer-hint');
                     const nextBtn = document.getElementById('next-p2-btn');
+                    const skipBtn = document.getElementById('skip-p2-btn');
                     let answered = false;
+
+                    function lockQuestion() {
+                        answerInput.disabled = true;
+                        document.getElementById('submit-answer').disabled = true;
+                        skipBtn.disabled = true;
+                        skipBtn.classList.add('opacity-40', 'cursor-not-allowed');
+                    }
+
                     function checkAnswer() {
                         if (answered) return;
                         const userAnswer = answerInput.value.trim().toLowerCase();
                         if (userAnswer === question.answer.toLowerCase()) {
                             answered = true;
                             feedbackDiv.innerHTML = `<span class="text-green-400">✅ Correct! The answer is: <strong>${question.answer}</strong></span>`;
-                            answerInput.disabled = true;
-                            document.getElementById('submit-answer').disabled = true;
+                            lockQuestion();
                             part2Score.correct++;
                             part2Log.push({ question: question.question, wasCorrect: true, correct: question.answer, given: userAnswer });
-                            nextBtn.textContent = currentQuestion + 1 < step.parts.part2.questions.length ? 'Next Question →' : 'Continue to Part 3 →';
                             nextBtn.classList.remove('hidden');
                             nextBtn.onclick = () => { currentQuestion++; renderQuestion(); };
                         } else {
@@ -1955,17 +1995,20 @@
                         }
                         answerInput.focus();
                     }
+
+                    skipBtn.onclick = () => {
+                        if (answered) return;
+                        answered = true;
+                        feedbackDiv.innerHTML = `<span class="text-yellow-400">⏭ Skipped. The correct answer was: <strong>${question.answer}</strong></span>`;
+                        hintDiv.classList.add('hidden');
+                        lockQuestion();
+                        part2Log.push({ question: question.question, wasCorrect: false, correct: question.answer, given: '(skipped)' });
+                        nextBtn.classList.remove('hidden');
+                        nextBtn.onclick = () => { currentQuestion++; renderQuestion(); };
+                    };
+
                     document.getElementById('submit-answer').onclick = checkAnswer;
                     answerInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') checkAnswer(); });
-                    // Skip button
-                    const skipBtn = document.createElement('button');
-                    skipBtn.textContent = 'Skip';
-                    skipBtn.className = 'mt-2 px-4 py-2 bg-slate-600 text-white rounded-lg text-sm hover:bg-slate-500';
-                    skipBtn.onclick = () => {
-                        part2Log.push({ question: question.question, wasCorrect: false, correct: question.answer, given: '(skipped)' });
-                        currentQuestion++; renderQuestion();
-                    };
-                    document.getElementById('answer-feedback').after(skipBtn);
                     answerInput.focus();
                 }
                 renderQuestion();
@@ -2027,7 +2070,7 @@
                 const totalCorrect = part1Score.correct + part2Score.correct + part3Score.correct;
                 const totalQ = part1Score.total + part2Score.total + part3Score.total;
                 // Save all logs to student record
-                saveStudentCaseData('anna', {
+                saveStudentCaseData('tyler', {
                     activity3Part1Log: part1Log,
                     activity3Part2Log: part2Log,
                     activity3Part3Log: part3Log,
@@ -2067,8 +2110,9 @@
                     <section class="flex flex-col gap-4">
                         <h2 class="text-2xl font-bold text-gray-800">Activity 3 Complete! 🎉</h2>
                         <p class="text-gray-600">Overall score: <strong>${totalCorrect} / ${totalQ}</strong></p>
-                        <div class="p-4 bg-blue-50 rounded-lg border border-blue-200 mb-2">
-                            <p class="font-bold text-blue-800">🔑 Your code: <span class="text-2xl tracking-widest">${activityCodes.activity3}</span></p>
+                        <div class="p-6 bg-green-400 border-4 border-green-600 rounded-2xl mb-4 text-center shadow-xl">
+                            <p class="text-2xl font-extrabold text-gray-900 mb-1">🎉 SNNOOP10 ACTIVITY COMPLETE!</p>
+                            <p class="text-gray-800 font-bold text-base mt-2">Great work completing the SNNOOP10 challenge in Tyler's case!</p>
                         </div>
                         <div class="grid grid-cols-3 gap-3 text-center text-sm mb-2">
                             <div class="p-2 bg-slate-100 rounded"><strong>Part 1</strong><br>${part1Score.correct}/${part1Score.total}</div>
@@ -2086,7 +2130,7 @@
                     correctCodesEntered.activity3 = true; enteredCodes.activity3 = activityCodes.activity3;
                     updateCodeInputStates(); saveState();
                 }
-                showModal('Activity 3 Complete!', `Score: ${totalCorrect}/${totalQ}. Your code is: <strong>${activityCodes.activity3}</strong>`);
+// code shown inline — no modal needed
                 nextButton.classList.remove('hidden');
             }
 
@@ -2117,7 +2161,7 @@
                             fb.textContent = 'Great choice! Introducing yourself and understanding the reason for the visit is the correct first step.';
                             fb.className = 'mt-4 text-center font-semibold text-green-600';
                             fb.classList.remove('hidden');
-                            setTimeout(() => { currentStep++; saveState(); renderStep(); }, 1800);
+                            nextButton.classList.remove('hidden');
                         } else {
                             fb.textContent = 'That\'s not quite right. Try to build rapport with your patient first!';
                             fb.className = 'mt-4 text-center font-semibold text-red-600';
@@ -2137,7 +2181,7 @@
                             fb.textContent = 'Correct! Continuing to evaluate the cause of Anna\'s headaches is the right decision.';
                             fb.className = 'mt-4 text-center font-semibold text-green-600';
                             fb.classList.remove('hidden');
-                            setTimeout(() => { currentStep++; saveState(); renderStep(); }, 1800);
+                            nextButton.classList.remove('hidden');
                         } else {
                             fb.textContent = 'Not quite! There is more information to gather and clinical reasoning to complete.';
                             fb.className = 'mt-4 text-center font-semibold text-red-600';
@@ -2220,7 +2264,7 @@
                             fb.textContent = 'Correct! Conducting further patient case considerations is the right approach.';
                             fb.className = 'mt-4 text-center font-semibold text-green-600';
                             fb.classList.remove('hidden');
-                            setTimeout(() => { currentStep++; saveState(); renderStep(); }, 1800);
+                            nextButton.classList.remove('hidden');
                         } else {
                             fb.textContent = 'Not quite! We need more information before making a final decision.';
                             fb.className = 'mt-4 text-center font-semibold text-red-600';
@@ -2246,7 +2290,7 @@
                         fb.textContent = 'Correct! Tension-type headache is the most likely diagnosis, followed by migraine type headache, and then cluster headache as least likely.';
                         fb.className = 'mt-4 p-4 bg-green-50 rounded-lg font-semibold text-green-700';
                         fb.classList.remove('hidden');
-                        setTimeout(() => { currentStep++; saveState(); renderStep(); }, 2500);
+                        nextButton.classList.remove('hidden');
                     } else {
                         fb.textContent = 'Incorrect. Review the patient\'s history and physical examination findings and try again.';
                         fb.className = 'mt-4 p-4 bg-red-50 rounded-lg font-semibold text-red-700';
@@ -2272,7 +2316,7 @@
                         if (btn.dataset.option === 'd') {
                             fb.className = 'mt-4 p-4 bg-green-50 rounded-lg font-semibold text-green-700';
                             document.querySelectorAll('.anna-diag-option').forEach(b => b.disabled = true);
-                            setTimeout(() => { currentStep++; saveState(); renderStep(); }, 2500);
+                            nextButton.classList.remove('hidden');
                         } else {
                             fb.className = 'mt-4 p-4 bg-red-50 rounded-lg font-semibold text-red-700';
                         }
@@ -2291,7 +2335,7 @@
                             fb.className = 'mt-4 p-4 bg-green-50 rounded-lg font-semibold text-green-700';
                             fb.classList.remove('hidden');
                             document.querySelectorAll('.anna-pharma-option').forEach(b => b.disabled = true);
-                            setTimeout(() => { currentStep++; saveState(); renderStep(); }, 3000);
+                            nextButton.classList.remove('hidden');
                         } else {
                             fb.textContent = 'That\'s not quite right. Consider what simple analgesics are first-line for tension headaches. Try again.';
                             fb.className = 'mt-4 p-4 bg-red-50 rounded-lg font-semibold text-red-700';
@@ -2312,7 +2356,7 @@
                             fb.className = 'mt-4 p-4 bg-green-50 rounded-lg font-semibold text-green-700';
                             fb.classList.remove('hidden');
                             document.querySelectorAll('.anna-nonpharma-option').forEach(b => b.disabled = true);
-                            setTimeout(() => { currentStep++; saveState(); renderStep(); }, 2500);
+                            nextButton.classList.remove('hidden');
                         } else {
                             fb.textContent = 'That\'s not quite right. Think about evidence-based physical and lifestyle approaches for tension headaches. Try again.';
                             fb.className = 'mt-4 p-4 bg-red-50 rounded-lg font-semibold text-red-700';
@@ -2324,18 +2368,72 @@
         }
 
         function renderConclusionStep(step) {
+            backButton.classList.add('hidden'); nextButton.classList.add('hidden');
             contentArea.innerHTML = `
-                <section class="text-center">
-                    <h2 class="text-4xl font-bold text-gray-800">${step.title}</h2>
-                    <p class="text-xl text-gray-600 mt-2">${step.subtitle}</p>
-                    <div class="mt-4 text-left p-6 bg-yellow-50 rounded-lg shadow-inner">${step.content}</div>
-                    <button id="view-chart-button" class="mt-6 px-8 py-4 bg-green-500 text-white rounded-lg font-semibold shadow-md hover:bg-green-600 transition-colors transform hover:scale-105">View Patient Charts</button>
+                <section class="flex flex-col gap-6">
+                    <div class="text-center">
+                        <h2 class="text-4xl font-bold text-gray-800">${step.title}</h2>
+                        <div class="mt-4 text-left p-6 bg-yellow-50 rounded-lg shadow-inner">${step.content}</div>
+                    </div>
+                    <div class="p-6 bg-slate-800 rounded-2xl">
+                        <h3 class="text-white text-xl font-bold text-center mb-2">🔐 Unlock Case 2</h3>
+                        <p class="text-slate-300 text-sm text-center mb-5">Enter the two codes you wrote down from Activities 1 and 2 to proceed to Tyler Haley's case.</p>
+                        <div class="flex flex-col gap-3">
+                            <div>
+                                <label class="text-slate-400 text-xs uppercase tracking-wide font-bold block mb-1">Activity 1 Code</label>
+                                <input id="unlock-code-1" type="text" maxlength="12"
+                                    class="w-full px-4 py-3 bg-slate-700 border-2 border-slate-500 text-white font-mono text-lg uppercase rounded-xl focus:outline-none focus:border-blue-400 tracking-widest"
+                                    placeholder="Enter code...">
+                            </div>
+                            <div>
+                                <label class="text-slate-400 text-xs uppercase tracking-wide font-bold block mb-1">Activity 2 Code</label>
+                                <input id="unlock-code-2" type="text" maxlength="12"
+                                    class="w-full px-4 py-3 bg-slate-700 border-2 border-slate-500 text-white font-mono text-lg uppercase rounded-xl focus:outline-none focus:border-blue-400 tracking-widest"
+                                    placeholder="Enter code...">
+                            </div>
+                        </div>
+                        <div id="unlock-feedback" class="mt-3 text-center font-semibold hidden"></div>
+                        <button id="unlock-btn" class="w-full mt-4 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-lg transition-colors">
+                            Unlock Case 2 <i class="fas fa-unlock-alt ml-1"></i>
+                        </button>
+                    </div>
                 </section>
             `;
-            backButton.classList.add('hidden'); nextButton.classList.add('hidden');
-            document.getElementById('view-chart-button').onclick = () => {
-                inPatientChart = true; currentChartStep = 0; saveState(); renderStep();
-            };
+
+            function checkCodes() {
+                const v1 = document.getElementById('unlock-code-1').value.trim().toUpperCase();
+                const v2 = document.getElementById('unlock-code-2').value.trim().toUpperCase();
+                const fb = document.getElementById('unlock-feedback');
+                const correct1 = v1 === activityCodes.activity1.toUpperCase();
+                const correct2 = v2 === activityCodes.activity2.toUpperCase();
+
+                // Per-field visual feedback
+                document.getElementById('unlock-code-1').style.borderColor = v1 === '' ? '' : (correct1 ? '#10b981' : '#ef4444');
+                document.getElementById('unlock-code-2').style.borderColor = v2 === '' ? '' : (correct2 ? '#10b981' : '#ef4444');
+
+                if (correct1 && correct2) {
+                    fb.textContent = '✅ Both codes correct! Proceeding to Case 2...';
+                    fb.className = 'mt-3 text-center font-semibold text-green-400';
+                    fb.classList.remove('hidden');
+                    correctCodesEntered.activity1 = true;
+                    correctCodesEntered.activity2 = true;
+                    saveState();
+                    document.getElementById('unlock-btn').disabled = true;
+                    setTimeout(() => { inPatientChart = true; currentChartStep = 0; saveState(); renderStep(); }, 1500);
+                } else {
+                    const wrong = [];
+                    if (!correct1) wrong.push('Activity 1');
+                    if (!correct2) wrong.push('Activity 2');
+                    fb.textContent = '❌ Incorrect code(s) for: ' + wrong.join(', ') + '. Check your notes and try again.';
+                    fb.className = 'mt-3 text-center font-semibold text-red-400';
+                    fb.classList.remove('hidden');
+                }
+            }
+
+            document.getElementById('unlock-btn').onclick = checkCodes;
+            ['unlock-code-1','unlock-code-2'].forEach(id => {
+                document.getElementById(id).addEventListener('keypress', e => { if (e.key === 'Enter') checkCodes(); });
+            });
         }
 
         function renderPatientChart(step) {
@@ -2343,6 +2441,20 @@
             if (!caseTimerDone.anna) finishCaseTimer('anna');
             startCaseTimer('tyler');
             markCaseStarted('tyler');
+
+            // Activity 3 (SNNOOP10) is part of Tyler's flow — delegate to its own renderer
+            if (step.type === 'activity3') {
+                renderActivity3(step);
+                return;
+            }
+            // Section banners for Tyler
+            if (step.type.startsWith('section-banner-tyler')) {
+                renderSectionBanner(step);
+                return;
+            }
+            // Update page header for Case 2
+            document.querySelector('header h1').textContent = 'Headache Case 2: Tyler Haley';
+
             contentArea.innerHTML = `
                 <section class="flex flex-col gap-4">
                     <h2 class="text-2xl font-bold text-gray-800">${step.title}</h2>
@@ -2362,17 +2474,25 @@
                 nextButton.classList.add('hidden');
                 document.getElementById('submit-decision').onclick = () => {
                     const selectedOption = document.querySelector('input[name="diagnosis3"]:checked');
-                    if (!selectedOption) { showModal('Please make a selection', 'You must choose an option to proceed.'); return; }
+                    const fb = document.getElementById('decision-feedback');
+                    if (!selectedOption) {
+                        fb.textContent = 'Please make a selection before submitting.';
+                        fb.className = 'mt-4 p-4 bg-red-50 rounded-lg font-semibold text-red-700';
+                        return;
+                    }
                     if (selectedOption.value === 'd') {
-                        showModal('Correct!', 'You are correct! The presence of red flag findings warrants urgent emergency assessment.');
-                        setTimeout(() => { currentChartStep++; saveState(); renderStep(); }, 2000);
+                        fb.textContent = 'Correct! You are correct! The presence of red flag findings warrants urgent emergency assessment.';
+                        fb.className = 'mt-4 p-4 bg-green-50 rounded-lg font-semibold text-green-700';
+                        document.querySelectorAll('input[name="diagnosis3"]').forEach(r => r.disabled = true);
+                        nextButton.classList.remove('hidden');
                     } else {
                         const msgs = {
                             'a': 'Tyler does have red flag symptoms, however, given the progressively worsening nature of his headaches in the presence of neurological symptoms, Tyler should be referred for urgent emergency assessment.',
                             'b': 'Tyler\'s symptoms are not mild - given the progressively worsening nature with neurological involvement, urgent emergency assessment is needed.',
                             'c': 'While blood pressure management is needed, the neurological red flags require urgent emergency assessment first.'
                         };
-                        showModal('Incorrect.', (msgs[selectedOption.value] || '') + ' Please try again.');
+                        fb.textContent = 'Incorrect. ' + (msgs[selectedOption.value] || '') + ' Please try again.';
+                        fb.className = 'mt-4 p-4 bg-red-50 rounded-lg font-semibold text-red-700';
                     }
                 };
             }
@@ -2382,6 +2502,13 @@
             setActivityMode(false);
             startCaseTimer('hannah');
             markCaseStarted('hannah');
+            // Update page header for Case 3
+            document.querySelector('header h1').textContent = 'Headache Case 3: Hannah Howard';
+            // Section banners for Hannah
+            if (step.type.startsWith('section-banner-hannah')) {
+                renderSectionBanner(step);
+                return;
+            }
             contentArea.innerHTML = `
                 <section class="flex flex-col gap-4">
                     <h2 class="text-2xl font-bold text-gray-800">${step.title}</h2>
@@ -2399,7 +2526,7 @@
                             feedbackDiv.textContent = 'Good Job! You have created a calming environment.';
                             feedbackDiv.className = 'mt-4 text-center font-semibold text-green-600';
                             feedbackDiv.classList.remove('hidden');
-                            setTimeout(() => { currentSecondPatientStep++; saveState(); renderStep(); }, 1500);
+                            nextButton.classList.remove('hidden');
                         } else {
                             feedbackDiv.textContent = 'She seems anxious, maybe try again.';
                             feedbackDiv.className = 'mt-4 text-center font-semibold text-red-600';
@@ -2409,17 +2536,42 @@
                 });
             }
 
+            if (step.type === 'second-patient-conclusion') {
+                nextButton.classList.add('hidden');
+                document.querySelectorAll('.hannah-headache-type').forEach(btn => {
+                    btn.onclick = () => {
+                        const fb = document.getElementById('hannah-headache-feedback');
+                        if (btn.dataset.option === 'primary') {
+                            fb.textContent = "Correct, Hannah's symptoms seem to be more consistent with a primary-type headache.";
+                            fb.className = 'mt-4 p-4 bg-green-50 rounded-lg font-semibold text-green-700';
+                            fb.classList.remove('hidden');
+                            document.querySelectorAll('.hannah-headache-type').forEach(b => b.disabled = true);
+                            nextButton.classList.remove('hidden');
+                        } else {
+                            fb.textContent = "Hannah does not appear to have any secondary-type headache symptoms, therefore secondary type headaches are less likely in this situation. Hint: Recall the SNNOOP10. Try making another selection.";
+                            fb.className = 'mt-4 p-4 bg-red-50 rounded-lg font-semibold text-red-700';
+                            fb.classList.remove('hidden');
+                        }
+                    };
+                });
+            }
+
             if (step.type === 'second-patient-clinical-info') {
                 nextButton.classList.add('hidden');
                 document.getElementById('submit-quiz').onclick = () => {
                     const answers = { q1: document.querySelector('input[name="q1"]:checked'), q2: document.querySelector('input[name="q2"]:checked'), q3: document.querySelector('input[name="q3"]:checked'), q4: document.querySelector('input[name="q4"]:checked'), q5: document.querySelector('input[name="q5"]:checked') };
-                    if (Object.values(answers).some(a => !a)) { showModal('Incomplete', 'Please answer all questions before submitting.'); return; }
+                    const feedbackDiv = document.getElementById('quiz-feedback');
+                    if (Object.values(answers).some(a => !a)) {
+                        feedbackDiv.textContent = 'Please answer all questions before submitting.';
+                        feedbackDiv.className = 'mt-4 text-center font-semibold text-red-600';
+                        feedbackDiv.classList.remove('hidden');
+                        return;
+                    }
                     const correctAnswers = { q1: 'A', q2: 'B', q3: 'B', q4: 'D', q5: 'D' };
                     let correctCount = Object.keys(answers).filter(q => answers[q].value === correctAnswers[q]).length;
-                    const feedbackDiv = document.getElementById('quiz-feedback');
                     if (correctCount === 5) {
                         feedbackDiv.textContent = 'Excellent! All answers are correct.'; feedbackDiv.className = 'mt-4 text-center font-semibold text-green-600'; feedbackDiv.classList.remove('hidden');
-                        setTimeout(() => { currentSecondPatientStep++; saveState(); renderStep(); }, 1500);
+                        nextButton.classList.remove('hidden');
                     } else {
                         feedbackDiv.textContent = `You got ${correctCount} out of 5 correct. Please review and try again.`; feedbackDiv.className = 'mt-4 text-center font-semibold text-red-600'; feedbackDiv.classList.remove('hidden');
                     }
@@ -2439,7 +2591,7 @@
                     const feedbackDiv = document.getElementById('order-feedback');
                     if (userAnswer === '4132') {
                         feedbackDiv.textContent = 'Correct! The order is 4 (Migraine), 1 (Medication overuse), 3 (Tension), 2 (Cluster).'; feedbackDiv.className = 'mt-4 text-center font-semibold text-green-600'; feedbackDiv.classList.remove('hidden');
-                        setTimeout(() => { currentSecondPatientStep++; saveState(); renderStep(); }, 2000);
+                        nextButton.classList.remove('hidden');
                     } else {
                         feedbackDiv.textContent = 'Incorrect order. Try again.'; feedbackDiv.className = 'mt-4 text-center font-semibold text-red-600'; feedbackDiv.classList.remove('hidden');
                     }
@@ -2459,10 +2611,15 @@
                 document.getElementById(h.id).onclick = () => {
                     const selected = document.querySelector(`input[name="${h.name}"]:checked`);
                     const fb = document.getElementById(h.feedbackId);
-                    if (!selected) { showModal('Please select an answer', 'You must choose an option to proceed.'); return; }
+                    if (!selected) {
+                        fb.textContent = 'Please select an answer before submitting.';
+                        fb.className = 'mt-4 text-center font-semibold text-red-600';
+                        fb.classList.remove('hidden');
+                        return;
+                    }
                     if (selected.value === h.correct) {
                         fb.textContent = `Correct! ${h.msg}`; fb.className = 'mt-4 text-center font-semibold text-green-600'; fb.classList.remove('hidden');
-                        setTimeout(() => { currentSecondPatientStep++; saveState(); renderStep(); }, 2000);
+                        nextButton.classList.remove('hidden');
                     } else {
                         fb.textContent = 'Incorrect. Please review the case details and try again.'; fb.className = 'mt-4 text-center font-semibold text-red-600'; fb.classList.remove('hidden');
                     }
@@ -2471,11 +2628,9 @@
 
             if (step.type === 'hannah-final-congrats') {
                 nextButton.classList.add('hidden');
+                backButton.classList.add('hidden');
                 finishCaseTimer('hannah');
                 markCaseCompleted('hannah');
-                document.getElementById('next-anna-button').onclick = () => {
-                    inAnnaPatient = true; currentAnnaStep = 0; inSecondPatient = false; saveState(); renderStep();
-                };
             }
         }
 
@@ -2498,6 +2653,10 @@
                 updateProgressBar();
                 switch (step.type) {
                     case 'intro': setActivityMode(false); renderIntroStep(step); break;
+                    case 'section-banner-anna-1':
+                    case 'section-banner-anna-2':
+                    case 'section-banner-anna-3':
+                        renderSectionBanner(step); break;
                     case 'anna-new-patient':
                     case 'anna-basic-info':
                     case 'anna-family-history':
@@ -2505,8 +2664,7 @@
                     case 'anna-social-history':
                     case 'anna-dietary':
                     case 'anna-review-systems':
-                    case 'anna-headache-intro':
-                        renderAnnaPreActivity(step); break;
+                        setActivityMode(false); renderAnnaPreActivity(step); break;
                     case 'anna-dp1':
                     case 'anna-next-step':
                     case 'anna-physical-exam':
@@ -2573,7 +2731,171 @@
             saveState(); renderStep();
         };
 
-        codePanelToggle.onclick = () => { codePanel.classList.toggle('open'); };
+
+        // =====================================================================
+        // BROWSER BACK BUTTON PROTECTION
+        // Push a dummy history entry so browser back hits our handler
+        history.pushState({ escapeRoom: true }, '', window.location.href);
+        window.addEventListener('popstate', function(e) {
+            // Student hit browser back — push forward again to stay on page
+            history.pushState({ escapeRoom: true }, '', window.location.href);
+            // Show warning
+            const confirmed = window.confirm(
+                '⚠️ Are you sure you want to go back?\n\n' +
+                'Leaving this page will NOT erase your progress — ' +
+                'your answers and position are saved automatically.\n\n' +
+                'Click OK to stay on the escape room.\n' +
+                'Click Cancel to continue navigating away.'
+            );
+            // confirmed = they clicked OK = stay (we already pushed state, so they stay)
+            // !confirmed = they clicked Cancel = let them navigate away
+            if (!confirmed) {
+                // Remove our protection and go back for real
+                history.go(-2);
+            }
+        });
+
+
+        // =====================================================================
+        // UTILITY FUNCTIONS (recovered)
+        // =====================================================================
+
+        function saveState() {
+            localStorage.setItem('correctCodesEntered', JSON.stringify(correctCodesEntered));
+            localStorage.setItem('enteredCodes', JSON.stringify(enteredCodes));
+            localStorage.setItem('activityScores', JSON.stringify(activityScores));
+            localStorage.setItem('mainTimeElapsed', mainTimeElapsed);
+            localStorage.setItem('currentQuestionIndex_activity2', currentQuestionIndex);
+            localStorage.setItem('activity2CorrectCount', activity2CorrectCount);
+            localStorage.setItem('inPatientChart', inPatientChart);
+            localStorage.setItem('currentChartStep', currentChartStep);
+            localStorage.setItem('inSecondPatient', inSecondPatient);
+            localStorage.setItem('currentSecondPatientStep', currentSecondPatientStep);
+            localStorage.setItem('inAnnaPatient', inAnnaPatient);
+            localStorage.setItem('currentAnnaStep', currentAnnaStep);
+            localStorage.setItem('caseTimers', JSON.stringify(caseTimers));
+            localStorage.setItem('caseTimerDone', JSON.stringify(caseTimerDone));
+            localStorage.setItem('activeCaseTimer', activeCaseTimer || '');
+        }
+
+        function updateProgressBar() {
+            const completedActivities = Object.values(correctCodesEntered).filter(status => status).length;
+            const progress = (completedActivities / Object.keys(activityCodes).length) * 100;
+            progressBar.style.width = `${progress}%`;
+        }
+
+        function updateCodeInputStates() {
+            /* Code panel UI was removed — codes are now shown inline after each
+               activity and verified via the unlock gate on the conclusion page.
+               This function is intentionally a no-op, kept only so existing
+               calls to updateCodeInputStates() elsewhere don't need to be removed. */
+        }
+
+        function showModal(title, message) {
+            modalTitle.innerHTML = title;
+            modalMessage.innerHTML = message;
+            modal.classList.remove('hidden');
+        }
+
+        function formatTime(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
+        }
+
+        function getStudentName() {
+            return localStorage.getItem('ner_current_student') || 'Unknown Student';
+        }
+
+        function startCaseTimer(caseName) {
+            if (activeCaseTimer === caseName) return; // already running
+            stopCaseTimer();
+            activeCaseTimer = caseName;
+            document.getElementById('case-timers').classList.remove('hidden');
+            // Mark as active
+            ['anna','tyler','hannah'].forEach(c => {
+                const badge = document.getElementById(`timer-${c}`);
+                badge.classList.remove('active','done');
+                if (caseTimerDone[c]) badge.classList.add('done');
+                else if (c === caseName) badge.classList.add('active');
+            });
+            caseTimerInterval = setInterval(() => {
+                caseTimers[caseName]++;
+                updateCaseTimerDisplay();
+                saveState();
+            }, 1000);
+        }
+
+        function markCaseCompleted(caseId, extraData = {}) {
+            saveStudentCaseData(caseId, {
+                completed: true,
+                caseTime: caseTimers[caseId] || 0,
+                completedAt: new Date().toISOString(),
+                ...extraData
+            });
+        }
+
+        function markCaseStarted(caseId) {
+            const student = getStudentName();
+            saveStudentCaseData(caseId, { started: true, startedAt: new Date().toISOString() });
+        }
+
+
+        function saveStudentCaseData(caseId, data) {
+            const student = getStudentName();
+            const key = `${NER_PREFIX}${student}_${caseId}`;
+            const existing = JSON.parse(localStorage.getItem(key) || '{}');
+            const merged = { ...existing, ...data, studentName: student, caseId, lastUpdated: new Date().toISOString() };
+            localStorage.setItem(key, JSON.stringify(merged));
+
+            // Mirror to Google Sheets
+            postToSheets('saveSession', { studentName: student, caseId, data: merged });
+
+            // If there are activity logs in this data, also post them
+            ['activity1Log','activity2Log','activity3Part1Log','activity3Part2Log','activity3Part3Log'].forEach(logKey => {
+                if (data[logKey]) {
+                    const topicMap = {
+                        activity1Log:      'Activity 1 — Headache Classification',
+                        activity2Log:      'Activity 2 — Red Flag MCQs',
+                        activity3Part1Log: 'Activity 3 Pt1 — Red/Green Flag Sort',
+                        activity3Part2Log: 'Activity 3 Pt2 — SNNOOP10 Fill-in',
+                        activity3Part3Log: 'Activity 3 Pt3 — True/False'
+                    };
+                    const mistakes = data[logKey]
+                        .filter(l => !l.wasCorrect)
+                        .map(l => ({ ...l, topic: topicMap[logKey] }));
+                    if (mistakes.length) {
+                        postToSheets('saveMistakes', { studentName: student, caseId, mistakes });
+                    }
+                }
+            });
+
+            // Post activity scores
+            const scoreMap = {
+                activity1Score: 'Activity 1',
+                activity2Score: 'Activity 2',
+                activity3Score: 'Activity 3'
+            };
+            Object.entries(scoreMap).forEach(([key, label]) => {
+                if (data[key]) {
+                    postToSheets('saveActivityScore', {
+                        studentName: student, caseId,
+                        activity: label, score: data[key]
+                    });
+                }
+            });
+        }
+
+
+        function postToSheets(action, payload) {
+            if (!SHEETS_URL) return; // no URL configured yet — local only
+            fetch(SHEETS_URL, {
+                method: 'POST',
+                mode: 'no-cors', // required for Apps Script
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action, ...payload })
+            }).catch(() => {}); // silently fail — localStorage is the backup
+        }
 
         // =====================================================================
         // INITIALIZE
@@ -2585,6 +2907,13 @@
             document.getElementById('student-banner').classList.remove('hidden');
             document.body.style.paddingTop = '2.5rem';
         }
+
+        // CHANGE 3: Warn before browser navigation away (back button, closing tab)
+        window.addEventListener('beforeunload', (e) => {
+            e.preventDefault();
+            e.returnValue = 'You will lose your current quiz progress if you leave. Are you sure?';
+            return e.returnValue;
+        });
 
         renderStep();
         updateCodeInputStates();
