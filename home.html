@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TRU MN-NP Program Escape Room — Home</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%); min-height: 100vh; }
+        .card-hover { transition: transform 0.25s, box-shadow 0.25s; }
+        .card-hover:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
+        .progress-ring { width: 48px; height: 48px; }
+        .glow { box-shadow: 0 0 20px rgba(59,130,246,0.4); }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-6">
+
+    <div class="w-full max-w-4xl">
+        <!-- Header -->
+        <div class="text-center mb-10">
+            <div class="inline-block bg-blue-600 text-white text-xs font-bold uppercase tracking-widest px-4 py-1 rounded-full mb-4">Clinical Education Platform</div>
+            <h1 class="text-5xl font-extrabold text-white leading-tight">TRU MN-NP Program Escape Room</h1>
+            <p class="text-blue-300 text-xl mt-3">Headaches Scenarios — Interactive Clinical Reasoning</p>
+        </div>
+
+        <!-- Student Name Entry -->
+        <div id="name-section" class="bg-white/10 backdrop-blur border border-white/20 rounded-2xl p-6 mb-8">
+            <div id="name-display" class="hidden">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-blue-300 text-sm font-semibold uppercase tracking-wide">Logged in as</p>
+                        <p id="name-display-text" class="text-white text-2xl font-bold mt-1"></p>
+                    </div>
+                    <button id="change-name-btn" class="px-4 py-2 bg-slate-700 text-blue-300 rounded-lg text-sm hover:bg-slate-600 transition-colors">
+                        <i class="fas fa-pencil-alt mr-1"></i> Change
+                    </button>
+                </div>
+            </div>
+            <div id="name-form">
+                <label class="block text-blue-300 text-sm font-semibold uppercase tracking-wide mb-2">
+                    <i class="fas fa-user-nurse mr-2"></i>Enter Your Full Name to Begin
+                </label>
+                <div class="flex gap-3">
+                    <input type="text" id="student-name-input"
+                        class="flex-1 px-4 py-3 bg-white/10 border border-white/30 text-white placeholder-blue-300/60 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 text-lg"
+                        placeholder="e.g. Jane Smith"
+                        maxlength="60">
+                    <button id="save-name-btn"
+                        class="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-500 transition-colors glow">
+                        Continue <i class="fas fa-arrow-right ml-1"></i>
+                    </button>
+                </div>
+                <p id="name-error" class="text-red-400 text-sm mt-2 hidden">Please enter your name before selecting a case.</p>
+            </div>
+        </div>
+
+        <!-- Case Cards -->
+        <div id="case-grid" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+
+            <!-- Anna Jacobs -->
+            <div class="card-hover bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-600 rounded-2xl p-6 cursor-pointer case-card" data-case="anna" data-file="nursing_escape_room_updated.html">
+                <div class="flex items-center justify-between mb-4">
+                    <span class="bg-emerald-500/20 text-emerald-300 text-xs font-bold uppercase tracking-wide px-3 py-1 rounded-full">Patient 1</span>
+                    <span id="anna-status" class="text-slate-500 text-xs"><i class="fas fa-circle text-slate-600"></i> Not started</span>
+                </div>
+                <div class="w-14 h-14 bg-emerald-500/20 rounded-xl flex items-center justify-center mb-4">
+                    <i class="fas fa-user-injured text-emerald-400 text-2xl"></i>
+                </div>
+                <h3 class="text-white text-xl font-bold mb-1">Anna Jacobs</h3>
+                <p class="text-slate-400 text-sm mb-4">37F · Administrative Assistant</p>
+                <div class="space-y-1 text-xs text-slate-400 mb-5">
+                    <div class="flex items-center gap-2"><i class="fas fa-clipboard-list text-emerald-400"></i> History, Exam & Diagnosis</div>
+                    <div class="flex items-center gap-2"><i class="fas fa-pills text-emerald-400"></i> Management Planning</div>
+                    <div class="flex items-center gap-2"><i class="fas fa-puzzle-piece text-emerald-400"></i> Activities 1, 2 & 3 (SNNOOP10)</div>
+                </div>
+                <div id="anna-time" class="text-emerald-400 text-xs font-semibold hidden"><i class="fas fa-clock mr-1"></i><span></span></div>
+                <button class="w-full mt-3 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-semibold transition-colors open-case-btn" data-case="anna" data-file="nursing_escape_room_updated.html">
+                    Open Case <i class="fas fa-external-link-alt ml-1 text-xs"></i>
+                </button>
+            </div>
+
+            <!-- Tyler Haley -->
+            <div class="card-hover bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-600 rounded-2xl p-6 cursor-pointer case-card" data-case="tyler" data-file="nursing_escape_room_updated.html">
+                <div class="flex items-center justify-between mb-4">
+                    <span class="bg-blue-500/20 text-blue-300 text-xs font-bold uppercase tracking-wide px-3 py-1 rounded-full">Patient 2</span>
+                    <span id="tyler-status" class="text-slate-500 text-xs"><i class="fas fa-circle text-slate-600"></i> Not started</span>
+                </div>
+                <div class="w-14 h-14 bg-blue-500/20 rounded-xl flex items-center justify-center mb-4">
+                    <i class="fas fa-user-injured text-blue-400 text-2xl"></i>
+                </div>
+                <h3 class="text-white text-xl font-bold mb-1">Tyler Haley</h3>
+                <p class="text-slate-400 text-sm mb-4">55M · Construction Worker</p>
+                <div class="space-y-1 text-xs text-slate-400 mb-5">
+                    <div class="flex items-center gap-2"><i class="fas fa-clipboard-list text-blue-400"></i> Red Flag Recognition</div>
+                    <div class="flex items-center gap-2"><i class="fas fa-brain text-blue-400"></i> Differential Diagnosis</div>
+                    <div class="flex items-center gap-2"><i class="fas fa-ambulance text-blue-400"></i> Emergency Decision Making</div>
+                </div>
+                <div id="tyler-time" class="text-blue-400 text-xs font-semibold hidden"><i class="fas fa-clock mr-1"></i><span></span></div>
+                <button class="w-full mt-3 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-semibold transition-colors open-case-btn" data-case="tyler" data-file="nursing_escape_room_updated.html">
+                    Open Case <i class="fas fa-external-link-alt ml-1 text-xs"></i>
+                </button>
+            </div>
+
+            <!-- Hannah Howard -->
+            <div class="card-hover bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-600 rounded-2xl p-6 cursor-pointer case-card" data-case="hannah" data-file="nursing_escape_room_updated.html">
+                <div class="flex items-center justify-between mb-4">
+                    <span class="bg-purple-500/20 text-purple-300 text-xs font-bold uppercase tracking-wide px-3 py-1 rounded-full">Patient 3</span>
+                    <span id="hannah-status" class="text-slate-500 text-xs"><i class="fas fa-circle text-slate-600"></i> Not started</span>
+                </div>
+                <div class="w-14 h-14 bg-purple-500/20 rounded-xl flex items-center justify-center mb-4">
+                    <i class="fas fa-user-injured text-purple-400 text-2xl"></i>
+                </div>
+                <h3 class="text-white text-xl font-bold mb-1">Hannah Howard</h3>
+                <p class="text-slate-400 text-sm mb-4">26F · Marketing Specialist</p>
+                <div class="space-y-1 text-xs text-slate-400 mb-5">
+                    <div class="flex items-center gap-2"><i class="fas fa-clipboard-list text-purple-400"></i> History & Examination</div>
+                    <div class="flex items-center gap-2"><i class="fas fa-search text-purple-400"></i> Differential Reasoning</div>
+                    <div class="flex items-center gap-2"><i class="fas fa-check-circle text-purple-400"></i> Clinical Quiz Challenges</div>
+                </div>
+                <div id="hannah-time" class="text-purple-400 text-xs font-semibold hidden"><i class="fas fa-clock mr-1"></i><span></span></div>
+                <button class="w-full mt-3 py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-semibold transition-colors open-case-btn" data-case="hannah" data-file="nursing_escape_room_updated.html">
+                    Open Case <i class="fas fa-external-link-alt ml-1 text-xs"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Footer links -->
+        <div class="flex justify-between items-center text-sm">
+            <p class="text-slate-500">Complete all three patient cases to finish the escape room.</p>
+            <a href="dashboard.html" target="_blank" class="text-slate-400 hover:text-white transition-colors">
+                <i class="fas fa-chart-bar mr-1"></i> Instructor Dashboard
+            </a>
+        </div>
+    </div>
+
+    <script>
+        const NER_PREFIX = 'ner_';
+
+        function getStudentName() { return localStorage.getItem('ner_current_student') || ''; }
+        function setStudentName(name) { localStorage.setItem('ner_current_student', name.trim()); }
+
+        function formatTime(seconds) {
+            if (!seconds) return '--:--';
+            const m = Math.floor(seconds / 60), s = seconds % 60;
+            return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+        }
+
+        function loadCaseProgress() {
+            const student = getStudentName();
+            if (!student) return;
+            ['anna','tyler','hannah'].forEach(caseId => {
+                const key = `${NER_PREFIX}${student}_${caseId}`;
+                const data = JSON.parse(localStorage.getItem(key) || '{}');
+                const statusEl = document.getElementById(`${caseId}-status`);
+                const timeEl = document.getElementById(`${caseId}-time`);
+                if (data.completed) {
+                    statusEl.innerHTML = '<i class="fas fa-check-circle text-green-400"></i> <span class="text-green-400">Completed</span>';
+                    if (data.caseTime && timeEl) {
+                        timeEl.querySelector('span').textContent = `Time: ${formatTime(data.caseTime)}`;
+                        timeEl.classList.remove('hidden');
+                    }
+                } else if (data.started) {
+                    statusEl.innerHTML = '<i class="fas fa-play-circle text-yellow-400"></i> <span class="text-yellow-400">In progress</span>';
+                }
+            });
+        }
+
+        function showNameForm() {
+            document.getElementById('name-form').classList.remove('hidden');
+            document.getElementById('name-display').classList.add('hidden');
+        }
+
+        function showNameDisplay(name) {
+            document.getElementById('name-form').classList.add('hidden');
+            document.getElementById('name-display').classList.remove('hidden');
+            document.getElementById('name-display-text').textContent = name;
+            loadCaseProgress();
+        }
+
+        // Init
+        const savedName = getStudentName();
+        if (savedName) {
+            showNameDisplay(savedName);
+            document.getElementById('student-name-input').value = savedName;
+        }
+
+        document.getElementById('save-name-btn').onclick = () => {
+            const name = document.getElementById('student-name-input').value.trim();
+            if (!name) {
+                document.getElementById('name-error').classList.remove('hidden');
+                return;
+            }
+            document.getElementById('name-error').classList.add('hidden');
+            setStudentName(name);
+            showNameDisplay(name);
+        };
+
+        document.getElementById('student-name-input').addEventListener('keypress', e => {
+            if (e.key === 'Enter') document.getElementById('save-name-btn').click();
+        });
+
+        document.getElementById('change-name-btn').onclick = showNameForm;
+
+        // Open case buttons
+        document.querySelectorAll('.open-case-btn').forEach(btn => {
+            btn.onclick = (e) => {
+                e.stopPropagation();
+                const student = getStudentName();
+                if (!student) {
+                    document.getElementById('name-error').classList.remove('hidden');
+                    document.getElementById('student-name-input').focus();
+                    return;
+                }
+                window.open(btn.dataset.file, '_blank');
+            };
+        });
+
+        // Also clicking the card opens the case
+        document.querySelectorAll('.case-card').forEach(card => {
+            card.onclick = () => {
+                const student = getStudentName();
+                if (!student) {
+                    document.getElementById('name-error').classList.remove('hidden');
+                    document.getElementById('student-name-input').focus();
+                    return;
+                }
+                window.open(card.dataset.file, '_blank');
+            };
+        });
+
+        // Refresh progress when tab gets focus (student may have completed a case)
+        window.addEventListener('focus', loadCaseProgress);
+    </script>
+</body>
+</html>
