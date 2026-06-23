@@ -119,6 +119,14 @@
             0%, 100% { box-shadow: 0 0 0 0 rgba(245,158,11,0.7); }
             50% { box-shadow: 0 0 0 12px rgba(245,158,11,0); }
         }
+		img {
+		max-width: 100%;
+		height: auto;
+		border-radius: 12px;
+		display: block;
+		margin: 0 auto;
+		}
+		
         .code-banner { animation: codePulse 1.8s ease-in-out 3; }
     </style>
 </head>
@@ -340,14 +348,19 @@
                 title: 'Social History',
                 content: `
                     <p>Married to husband (Andrew) for 12 years. Has a 10-year-old daughter (Kaylee). Lives in a house in a suburban neighborhood. Works as an administrative assistant in a very busy law office. She describes her position as stressful. She denies any financial stress.</p>
-                    <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="text-center"><img src="Anna work.png" alt="Anna at work">
-                            <p class="text-sm text-gray-500 mt-2 italic">Anna swamped during work at Hamlin, Hamlin and McGill.</p>
-                        </div>
-                        <div class="text-center"><img src="Anna family.png" alt="Anna's Family">
-                            <p class="text-sm text-gray-500 mt-2 italic">Anna pulls this photo of her family from her wallet.</p>
-                        </div>
-                    </div>
+                    <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+    
+					<div class="text-center">
+						<img src="Anna work.png" alt="Anna at work">
+						<p class="text-sm text-gray-500 mt-2 italic"> Anna swamped during work at Hamlin, Hamlin and McGill.</p>
+					</div>
+
+					<div class="text-center">
+						<img src="Anna family.png" alt="Anna's Family">
+						<p class="text-sm text-gray-500 mt-2 italic">Anna pulls this photo of her family from her wallet.</p>
+					</div>
+
+					</div>
                     <p class="mt-6 text-blue-600 font-medium">Click 'Next' to learn about Anna's dietary information.</p>
                 `
             },
@@ -357,16 +370,21 @@
                 title: 'Dietary Information Learned!',
                 content: `
                     <p class="font-bold">Diet:</p>
-                    <p class="mt-2">Tries to eat a Mediterranean diet as she heard it was healthy, but sometimes grabs something on the go, depending on how busy she is. She drinks 1-2 glasses of wine per night to relax. She consumes 4-5 cups of coffee per day to keep her energy up during work. She does not smoke or use any other substances. She does not exercise often, but usually goes on a walk 1-2 times per week.</p>
-                    <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4"><img src="Anna's mediterranean diet.png" alt="Anna's Mediterranean Diet">
-                        <div class="text-center">
-                            <p class="text-sm text-gray-500 mt-2 italic">Anna's go-to meal for her Mediterranean diet.</p>
-                        </div>
-					<div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4"><img src="Anna's on the go.png" alt="Anna's On-The-Go Meal">
-                        <div class="text-center">
-                            <p class="text-sm text-gray-500 mt-2 italic">Anna's favorite on-the-go meal.</p>
-                        </div>
-                    </div>
+                    <p class="mt-2">Tries to eat a Mediterranean diet as she heard it was healthy, but sometimes grabs something on the go, depending on how busy she is. She drinks 1-2 glasses of wine per night to relax. She consumes 4-5 cups of coffee per day to keep her energy up during work. She does not smoke or use any other substances. She does not exercise often, but usually goes on a walk 1-2 times per week.</p>			
+					
+					<div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+    
+					<div class="text-center">
+						<img src="Anna's mediterranean diet.png" alt="Anna's Mediterranean Diet">
+						<p class="text-sm text-gray-500 mt-2 italic"> Anna's go-to meal for her Mediterranean diet.</p>
+					</div>
+
+					<div class="text-center">
+						<img src="Anna's on the go.png" alt="Anna's On-The-Go Meal">
+						<p class="text-sm text-gray-500 mt-2 italic">Anna's favorite on-the-go meal.</p>
+					</div>
+
+					</div>
                     <p class="mt-6 text-blue-600 font-medium">Click 'Next' to learn about Anna's review of systems.</p>
                 `
             },
