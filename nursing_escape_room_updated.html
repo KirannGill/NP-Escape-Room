@@ -1197,9 +1197,11 @@
                 title: 'Clinical Information Procession',
                 content: `
                     <p>As reviewed in case scenario #1, primary headaches are disorders by themselves. They are caused by independent pathophysiologic mechanisms and not by other disorders. Examples of primary headaches include tension-type headache, migraine headache, or cluster headache.</p>
-                    <div class="mt-4 p-4 bg-gray-100 rounded-lg text-center">
-                        <p class="text-sm italic">[Video Link Placeholder]</p>
-                        <p class="mt-2 text-sm">Please note that this video is an excellent resource. For example, this video mentions benzodiazepines as an option for chronic tension headache treatment. Current evidence no longer recommends benzodiazepines in the treatment of chronic tension headaches.</p>
+                    <div class="mt-4 p-4 bg-gray-100 rounded-lg">
+                        <div class="relative w-full" style="padding-bottom: 56.25%;">
+                            <iframe class="absolute top-0 left-0 w-full h-full rounded-lg" src="https://www.youtube.com/embed/jHok_WFyijM" title="Headache Types Video" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+                        </div>
+                        <p class="mt-3 text-sm text-gray-600">Please note that this video is an excellent resource. For example, this video mentions benzodiazepines as an option for chronic tension headache treatment. Current evidence no longer recommends benzodiazepines in the treatment of chronic tension headaches.</p>
                     </div>
                     <div class="mt-6">
                         <h3 class="text-xl font-bold mb-4">Types of Headaches</h3>
@@ -1911,22 +1913,18 @@
                 optionsContainer.innerHTML = ''; quizFeedback.textContent = '';
                 if (nextQBtn) nextQBtn.classList.add('hidden');
 
+                let attemptsThisQuestion = 0;
+
                 question.options.forEach((option, index) => {
                     const button = document.createElement('button');
                     button.textContent = option;
                     button.className = 'w-full text-left px-4 py-3 border border-slate-500 bg-slate-700 text-white rounded-lg transition-colors duration-200 hover:bg-slate-600';
-                    optionsContainer.appendChild(button);
-                });
 
-                let attemptsThisQuestion = 0;
-
-                document.querySelectorAll('#options-container button').forEach((button, index) => {
                     button.onclick = () => {
                         if (button.disabled) return;
                         const isCorrect = index === question.correctAnswer;
 
                         if (isCorrect) {
-                            // Lock all buttons, highlight correct green
                             document.querySelectorAll('#options-container button').forEach(btn => {
                                 btn.disabled = true; btn.classList.remove('hover:bg-slate-600');
                             });
@@ -1942,7 +1940,6 @@
                         } else {
                             attemptsThisQuestion++;
                             if (attemptsThisQuestion >= 2) {
-                                // Second wrong attempt — lock everything, reveal correct
                                 document.querySelectorAll('#options-container button').forEach(btn => {
                                     btn.disabled = true; btn.classList.remove('hover:bg-slate-600');
                                 });
@@ -1957,7 +1954,6 @@
                                 const nqb = document.getElementById('next-question-btn');
                                 if (nqb) { nqb.classList.remove('hidden'); nqb.textContent = currentQuestionIndex + 1 < step.questions.length ? 'Next Question →' : 'See Results →'; nqb.onclick = () => { currentQuestionIndex++; renderQuestion(); }; }
                             } else {
-                                // First wrong attempt — flash red, let them try again
                                 button.classList.remove('bg-slate-700');
                                 button.classList.add('bg-red-600', 'border-red-400');
                                 button.disabled = true;
@@ -1965,6 +1961,8 @@
                             }
                         }
                     };
+
+                    optionsContainer.appendChild(button);
                 });
             }
 
