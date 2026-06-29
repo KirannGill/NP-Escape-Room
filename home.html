@@ -25,6 +25,67 @@
             <p class="text-blue-300 text-xl mt-3">Headaches Scenarios — Interactive Clinical Reasoning</p>
         </div>
 
+        <!-- Case Cards (info only) -->
+        <div id="case-grid" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+
+            <!-- Anna Jacobs -->
+            <div class="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-600 rounded-2xl p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <span class="bg-emerald-500/20 text-emerald-300 text-xs font-bold uppercase tracking-wide px-3 py-1 rounded-full">Patient 1</span>
+                    <span id="anna-status" class="text-slate-500 text-xs"><i class="fas fa-circle text-slate-600"></i> Not started</span>
+                </div>
+                <div class="w-14 h-14 bg-emerald-500/20 rounded-xl flex items-center justify-center mb-4">
+                    <i class="fas fa-user-injured text-emerald-400 text-2xl"></i>
+                </div>
+                <h3 class="text-white text-xl font-bold mb-1">Anna Jacobs</h3>
+                <p class="text-slate-400 text-sm mb-4">37F · Administrative Assistant</p>
+                <div class="space-y-1 text-xs text-slate-400">
+                    <div class="flex items-center gap-2"><i class="fas fa-clipboard-list text-emerald-400"></i> History, Exam & Diagnosis</div>
+                    <div class="flex items-center gap-2"><i class="fas fa-pills text-emerald-400"></i> Management Planning</div>
+                    <div class="flex items-center gap-2"><i class="fas fa-puzzle-piece text-emerald-400"></i> Activities 1, 2 & 3 (SNNOOP10)</div>
+                </div>
+                <div id="anna-time" class="text-emerald-400 text-xs font-semibold mt-3 hidden"><i class="fas fa-clock mr-1"></i><span></span></div>
+            </div>
+
+            <!-- Tyler Haley -->
+            <div class="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-600 rounded-2xl p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <span class="bg-blue-500/20 text-blue-300 text-xs font-bold uppercase tracking-wide px-3 py-1 rounded-full">Patient 2</span>
+                    <span id="tyler-status" class="text-slate-500 text-xs"><i class="fas fa-circle text-slate-600"></i> Not started</span>
+                </div>
+                <div class="w-14 h-14 bg-blue-500/20 rounded-xl flex items-center justify-center mb-4">
+                    <i class="fas fa-user-injured text-blue-400 text-2xl"></i>
+                </div>
+                <h3 class="text-white text-xl font-bold mb-1">Tyler Haley</h3>
+                <p class="text-slate-400 text-sm mb-4">55M · Construction Worker</p>
+                <div class="space-y-1 text-xs text-slate-400">
+                    <div class="flex items-center gap-2"><i class="fas fa-clipboard-list text-blue-400"></i> Red Flag Recognition</div>
+                    <div class="flex items-center gap-2"><i class="fas fa-brain text-blue-400"></i> Differential Diagnosis</div>
+                    <div class="flex items-center gap-2"><i class="fas fa-ambulance text-blue-400"></i> Emergency Decision Making</div>
+                </div>
+                <div id="tyler-time" class="text-blue-400 text-xs font-semibold mt-3 hidden"><i class="fas fa-clock mr-1"></i><span></span></div>
+            </div>
+
+            <!-- Hannah Howard -->
+            <div class="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-600 rounded-2xl p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <span class="bg-purple-500/20 text-purple-300 text-xs font-bold uppercase tracking-wide px-3 py-1 rounded-full">Patient 3</span>
+                    <span id="hannah-status" class="text-slate-500 text-xs"><i class="fas fa-circle text-slate-600"></i> Not started</span>
+                </div>
+                <div class="w-14 h-14 bg-purple-500/20 rounded-xl flex items-center justify-center mb-4">
+                    <i class="fas fa-user-injured text-purple-400 text-2xl"></i>
+                </div>
+                <h3 class="text-white text-xl font-bold mb-1">Hannah Howard</h3>
+                <p class="text-slate-400 text-sm mb-4">26F · Marketing Specialist</p>
+                <div class="space-y-1 text-xs text-slate-400">
+                    <div class="flex items-center gap-2"><i class="fas fa-clipboard-list text-purple-400"></i> History & Examination</div>
+                    <div class="flex items-center gap-2"><i class="fas fa-search text-purple-400"></i> Differential Reasoning</div>
+                    <div class="flex items-center gap-2"><i class="fas fa-check-circle text-purple-400"></i> Clinical Quiz Challenges</div>
+                </div>
+                <div id="hannah-time" class="text-purple-400 text-xs font-semibold mt-3 hidden"><i class="fas fa-clock mr-1"></i><span></span></div>
+            </div>
+        </div>
+
         <!-- Student Name Entry -->
         <div id="name-section" class="bg-white/10 backdrop-blur border border-white/20 rounded-2xl p-6 mb-8">
             <div id="name-display" class="hidden">
@@ -37,6 +98,10 @@
                         <i class="fas fa-pencil-alt mr-1"></i> Change
                     </button>
                 </div>
+                <button id="begin-btn-logged-in"
+                    class="w-full mt-4 px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-500 transition-colors glow">
+                    Begin Escape Room <i class="fas fa-play ml-2"></i>
+                </button>
             </div>
             <div id="name-form">
                 <label class="block text-blue-300 text-sm font-semibold uppercase tracking-wide mb-2">
@@ -49,80 +114,10 @@
                         maxlength="60">
                     <button id="save-name-btn"
                         class="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-500 transition-colors glow">
-                        Continue <i class="fas fa-arrow-right ml-1"></i>
+                        Begin <i class="fas fa-play ml-1"></i>
                     </button>
                 </div>
-                <p id="name-error" class="text-red-400 text-sm mt-2 hidden">Please enter your name before selecting a case.</p>
-            </div>
-        </div>
-
-        <!-- Case Cards -->
-        <div id="case-grid" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-
-            <!-- Anna Jacobs -->
-            <div class="card-hover bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-600 rounded-2xl p-6 cursor-pointer case-card" data-case="anna" data-file="nursing_escape_room_updated.html">
-                <div class="flex items-center justify-between mb-4">
-                    <span class="bg-emerald-500/20 text-emerald-300 text-xs font-bold uppercase tracking-wide px-3 py-1 rounded-full">Patient 1</span>
-                    <span id="anna-status" class="text-slate-500 text-xs"><i class="fas fa-circle text-slate-600"></i> Not started</span>
-                </div>
-                <div class="w-14 h-14 bg-emerald-500/20 rounded-xl flex items-center justify-center mb-4">
-                    <i class="fas fa-user-injured text-emerald-400 text-2xl"></i>
-                </div>
-                <h3 class="text-white text-xl font-bold mb-1">Anna Jacobs</h3>
-                <p class="text-slate-400 text-sm mb-4">37F · Administrative Assistant</p>
-                <div class="space-y-1 text-xs text-slate-400 mb-5">
-                    <div class="flex items-center gap-2"><i class="fas fa-clipboard-list text-emerald-400"></i> History, Exam & Diagnosis</div>
-                    <div class="flex items-center gap-2"><i class="fas fa-pills text-emerald-400"></i> Management Planning</div>
-                    <div class="flex items-center gap-2"><i class="fas fa-puzzle-piece text-emerald-400"></i> Activities 1, 2 & 3 (SNNOOP10)</div>
-                </div>
-                <div id="anna-time" class="text-emerald-400 text-xs font-semibold hidden"><i class="fas fa-clock mr-1"></i><span></span></div>
-                <button class="w-full mt-3 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-semibold transition-colors open-case-btn" data-case="anna" data-file="nursing_escape_room_updated.html">
-                    Open Case <i class="fas fa-external-link-alt ml-1 text-xs"></i>
-                </button>
-            </div>
-
-            <!-- Tyler Haley -->
-            <div class="card-hover bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-600 rounded-2xl p-6 cursor-pointer case-card" data-case="tyler" data-file="nursing_escape_room_updated.html">
-                <div class="flex items-center justify-between mb-4">
-                    <span class="bg-blue-500/20 text-blue-300 text-xs font-bold uppercase tracking-wide px-3 py-1 rounded-full">Patient 2</span>
-                    <span id="tyler-status" class="text-slate-500 text-xs"><i class="fas fa-circle text-slate-600"></i> Not started</span>
-                </div>
-                <div class="w-14 h-14 bg-blue-500/20 rounded-xl flex items-center justify-center mb-4">
-                    <i class="fas fa-user-injured text-blue-400 text-2xl"></i>
-                </div>
-                <h3 class="text-white text-xl font-bold mb-1">Tyler Haley</h3>
-                <p class="text-slate-400 text-sm mb-4">55M · Construction Worker</p>
-                <div class="space-y-1 text-xs text-slate-400 mb-5">
-                    <div class="flex items-center gap-2"><i class="fas fa-clipboard-list text-blue-400"></i> Red Flag Recognition</div>
-                    <div class="flex items-center gap-2"><i class="fas fa-brain text-blue-400"></i> Differential Diagnosis</div>
-                    <div class="flex items-center gap-2"><i class="fas fa-ambulance text-blue-400"></i> Emergency Decision Making</div>
-                </div>
-                <div id="tyler-time" class="text-blue-400 text-xs font-semibold hidden"><i class="fas fa-clock mr-1"></i><span></span></div>
-                <button class="w-full mt-3 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-semibold transition-colors open-case-btn" data-case="tyler" data-file="nursing_escape_room_updated.html">
-                    Open Case <i class="fas fa-external-link-alt ml-1 text-xs"></i>
-                </button>
-            </div>
-
-            <!-- Hannah Howard -->
-            <div class="card-hover bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-600 rounded-2xl p-6 cursor-pointer case-card" data-case="hannah" data-file="nursing_escape_room_updated.html">
-                <div class="flex items-center justify-between mb-4">
-                    <span class="bg-purple-500/20 text-purple-300 text-xs font-bold uppercase tracking-wide px-3 py-1 rounded-full">Patient 3</span>
-                    <span id="hannah-status" class="text-slate-500 text-xs"><i class="fas fa-circle text-slate-600"></i> Not started</span>
-                </div>
-                <div class="w-14 h-14 bg-purple-500/20 rounded-xl flex items-center justify-center mb-4">
-                    <i class="fas fa-user-injured text-purple-400 text-2xl"></i>
-                </div>
-                <h3 class="text-white text-xl font-bold mb-1">Hannah Howard</h3>
-                <p class="text-slate-400 text-sm mb-4">26F · Marketing Specialist</p>
-                <div class="space-y-1 text-xs text-slate-400 mb-5">
-                    <div class="flex items-center gap-2"><i class="fas fa-clipboard-list text-purple-400"></i> History & Examination</div>
-                    <div class="flex items-center gap-2"><i class="fas fa-search text-purple-400"></i> Differential Reasoning</div>
-                    <div class="flex items-center gap-2"><i class="fas fa-check-circle text-purple-400"></i> Clinical Quiz Challenges</div>
-                </div>
-                <div id="hannah-time" class="text-purple-400 text-xs font-semibold hidden"><i class="fas fa-clock mr-1"></i><span></span></div>
-                <button class="w-full mt-3 py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-semibold transition-colors open-case-btn" data-case="hannah" data-file="nursing_escape_room_updated.html">
-                    Open Case <i class="fas fa-external-link-alt ml-1 text-xs"></i>
-                </button>
+                <p id="name-error" class="text-red-400 text-sm mt-2 hidden">Please enter your name to begin.</p>
             </div>
         </div>
 
@@ -186,6 +181,7 @@
             document.getElementById('student-name-input').value = savedName;
         }
 
+        // Begin button (name form) — save name AND open escape room
         document.getElementById('save-name-btn').onclick = () => {
             const name = document.getElementById('student-name-input').value.trim();
             if (!name) {
@@ -195,6 +191,7 @@
             document.getElementById('name-error').classList.add('hidden');
             setStudentName(name);
             showNameDisplay(name);
+            window.open('nursing_escape_room_updated.html', '_blank');
         };
 
         document.getElementById('student-name-input').addEventListener('keypress', e => {
@@ -203,32 +200,10 @@
 
         document.getElementById('change-name-btn').onclick = showNameForm;
 
-        // Open case buttons
-        document.querySelectorAll('.open-case-btn').forEach(btn => {
-            btn.onclick = (e) => {
-                e.stopPropagation();
-                const student = getStudentName();
-                if (!student) {
-                    document.getElementById('name-error').classList.remove('hidden');
-                    document.getElementById('student-name-input').focus();
-                    return;
-                }
-                window.open(btn.dataset.file, '_blank');
-            };
-        });
-
-        // Also clicking the card opens the case
-        document.querySelectorAll('.case-card').forEach(card => {
-            card.onclick = () => {
-                const student = getStudentName();
-                if (!student) {
-                    document.getElementById('name-error').classList.remove('hidden');
-                    document.getElementById('student-name-input').focus();
-                    return;
-                }
-                window.open(card.dataset.file, '_blank');
-            };
-        });
+        // Begin button (when already logged in)
+        document.getElementById('begin-btn-logged-in').onclick = () => {
+            window.open('nursing_escape_room_updated.html', '_blank');
+        };
 
         // Refresh progress when tab gets focus (student may have completed a case)
         window.addEventListener('focus', loadCaseProgress);
