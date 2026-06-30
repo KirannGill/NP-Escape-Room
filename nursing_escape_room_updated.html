@@ -212,7 +212,7 @@
         let caseUnscoredAnswers = JSON.parse(localStorage.getItem('caseUnscoredAnswers') || 'null') || {
             anna: [], tyler: [], hannah: []
         };
-        const SHEETS_URL = localStorage.getItem('ner_sheets_url') || 'https://script.google.com/macros/s/AKfycbwbrScc-9wXuBovvFipb22LwQRXnh5xoOd9N6hqqLCw3Ps5UZU3QGHPErNtDNNk4BCIqw/exec';
+        const SHEETS_URL = localStorage.getItem('ner_sheets_url') || 'https://script.google.com/macros/s/AKfycbwSEDpEg3n2EZKyKLzu_dK4yYZS3gkm-qJ5QOSfpGQoetVHzQAW34T1TXz7hLgJUzuK/exec';
 
         // State Variables
         let currentStep = 0;
@@ -3171,7 +3171,7 @@
                         feedbackDiv.classList.remove('hidden');
                         return;
                     }
-                    const correctAnswers = { q1: 'A', q2: 'B', q3: 'B', q4: 'D', q5: 'D' };
+                    const correctAnswers = { q1: 'A', q2: 'A', q3: 'B', q4: 'D', q5: 'A' };
                     let correctCount = Object.keys(answers).filter(q => answers[q].value === correctAnswers[q]).length;
                     if (correctCount === 5) {
                         feedbackDiv.textContent = 'Excellent! All answers are correct.'; feedbackDiv.className = 'mt-4 text-center font-semibold text-green-600'; feedbackDiv.classList.remove('hidden');
@@ -3180,8 +3180,8 @@
                     } else {
                         videoQuizTries++;
                         if (videoQuizTries >= 2) {
-                            const correctLabels = { q1: 'A', q2: 'B', q3: 'B', q4: 'D', q5: 'D' };
-                            feedbackDiv.innerHTML = `❌ Incorrect after 2 attempts. You got ${correctCount} out of 5. <strong>Correct answers: Q1=A, Q2=B, Q3=B, Q4=D, Q5=D.</strong> Points awarded for questions you got right.`;
+                            const correctLabels = { q1: 'A', q2: 'A', q3: 'B', q4: 'D', q5: 'A' };
+                            feedbackDiv.innerHTML = `❌ Incorrect after 2 attempts. You got ${correctCount} out of 5. <strong>Correct answers: Q1=A, Q2=A, Q3=B, Q4=D, Q5=A.</strong> Points awarded for questions you got right.`;
                             feedbackDiv.className = 'mt-4 text-center font-semibold text-red-600'; feedbackDiv.classList.remove('hidden');
                             Object.keys(correctAnswers).forEach(q => {
                                 const isRight = answers[q] && answers[q].value === correctAnswers[q];
