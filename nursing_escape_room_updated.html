@@ -212,8 +212,7 @@
         let caseUnscoredAnswers = JSON.parse(localStorage.getItem('caseUnscoredAnswers') || 'null') || {
             anna: [], tyler: [], hannah: []
         };
-        // PASTE your new Google Apps Script Web App URL here (same URL as in home.html's SHEET_WEBHOOK_URL)
-        const SHEETS_URL = localStorage.getItem('ner_sheets_url') || '';
+        const SHEETS_URL = localStorage.getItem('ner_sheets_url') || 'https://script.google.com/macros/s/AKfycbyfSGaKDGSFBZ3dCqqgsaDi68JhgGNPZue3GWIZGbwSLshRFyP-cTUTAnfs7sfZiKXWiQ/exec';
 
         // State Variables
         let currentStep = 0;
