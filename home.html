@@ -86,7 +86,7 @@
             </div>
         </div>
 
-        <!-- Student Name Entry -->
+        <!-- Student Name + Password Entry -->
         <div id="name-section" class="bg-white/10 backdrop-blur border border-white/20 rounded-2xl p-6 mb-8">
             <div id="name-display" class="hidden">
                 <div class="flex items-center justify-between">
@@ -105,19 +105,29 @@
             </div>
             <div id="name-form">
                 <label class="block text-blue-300 text-sm font-semibold uppercase tracking-wide mb-2">
-                    <i class="fas fa-user-nurse mr-2"></i>Enter Your Full Name to Begin
+                    <i class="fas fa-user-nurse mr-2"></i>Enter Your Full Name
+                </label>
+                <input type="text" id="student-name-input"
+                    class="w-full px-4 py-3 bg-white/10 border border-white/30 text-white placeholder-blue-300/60 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 text-lg mb-4"
+                    placeholder="e.g. Jane Smith"
+                    maxlength="60">
+
+                <label class="block text-blue-300 text-sm font-semibold uppercase tracking-wide mb-2">
+                    <i class="fas fa-lock mr-2"></i>Enter Class Password
                 </label>
                 <div class="flex gap-3">
-                    <input type="text" id="student-name-input"
+                    <input type="password" id="student-password-input"
                         class="flex-1 px-4 py-3 bg-white/10 border border-white/30 text-white placeholder-blue-300/60 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 text-lg"
-                        placeholder="e.g. Jane Smith"
-                        maxlength="60">
+                        placeholder="Password"
+                        autocomplete="off">
                     <button id="save-name-btn"
-                        class="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-500 transition-colors glow">
+                        class="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-500 transition-colors glow whitespace-nowrap">
                         Begin <i class="fas fa-play ml-1"></i>
                     </button>
                 </div>
                 <p id="name-error" class="text-red-400 text-sm mt-2 hidden">Please enter your name to begin.</p>
+                <p id="password-error" class="text-red-400 text-sm mt-2 hidden">Incorrect password. Please try again.</p>
+                <p id="submit-status" class="text-blue-300 text-sm mt-2 hidden"></p>
             </div>
         </div>
 
@@ -132,6 +142,10 @@
 
     <script>
         const NER_PREFIX = 'ner_';
+        const CLASS_PASSWORD = 'Headache';
+        // PASTE your new Google Apps Script Web App URL here (same URL goes in
+        // nursing_escape_room_updated.html's SHEETS_URL constant)
+        const SHEET_WEBHOOK_URL = '';
 
         function getStudentName() { return localStorage.getItem('ner_current_student') || ''; }
         function setStudentName(name) { localStorage.setItem('ner_current_student', name.trim()); }
@@ -174,6 +188,31 @@
             loadCaseProgress();
         }
 
+        // Sends the student's name to the integrated Google Sheet via Apps Script web app.
+        // Uses no-cors mode since Apps Script web apps typically don't return CORS headers;
+        // this means we can't read the response, but the request still reaches the sheet.
+        function logNameToSheet(name) {
+            const loginTimestamp = new Date().toISOString();
+            localStorage.setItem(`${NER_PREFIX}${name}_login_timestamp`, loginTimestamp);
+
+            if (!SHEET_WEBHOOK_URL) {
+                console.warn('SHEET_WEBHOOK_URL is not set — skipping Google Sheet logging.');
+                return Promise.resolve();
+            }
+            return fetch(SHEET_WEBHOOK_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'text/plain' }, // avoids CORS preflight on Apps Script
+                body: JSON.stringify({
+                    action: 'logLogin',
+                    studentName: name,
+                    timestamp: loginTimestamp
+                })
+            }).catch(err => {
+                console.error('Failed to log name to Google Sheet:', err);
+            });
+        }
+
         // Init
         const savedName = getStudentName();
         if (savedName) {
@@ -181,27 +220,56 @@
             document.getElementById('student-name-input').value = savedName;
         }
 
-        // Begin button (name form) — save name AND open escape room
+        // Begin button (name + password form) — validate, save name, log to sheet, open escape room
         document.getElementById('save-name-btn').onclick = () => {
             const name = document.getElementById('student-name-input').value.trim();
+            const password = document.getElementById('student-password-input').value;
+            const nameErrorEl = document.getElementById('name-error');
+            const passwordErrorEl = document.getElementById('password-error');
+            const statusEl = document.getElementById('submit-status');
+
+            nameErrorEl.classList.add('hidden');
+            passwordErrorEl.classList.add('hidden');
+            statusEl.classList.add('hidden');
+
             if (!name) {
-                document.getElementById('name-error').classList.remove('hidden');
+                nameErrorEl.classList.remove('hidden');
                 return;
             }
-            document.getElementById('name-error').classList.add('hidden');
+            if (password !== CLASS_PASSWORD) {
+                passwordErrorEl.classList.remove('hidden');
+                document.getElementById('student-password-input').value = '';
+                document.getElementById('student-password-input').focus();
+                return;
+            }
+
+            const btn = document.getElementById('save-name-btn');
+            btn.disabled = true;
+            statusEl.textContent = 'Saving your name...';
+            statusEl.classList.remove('hidden');
+
             setStudentName(name);
-            showNameDisplay(name);
-            window.open('nursing_escape_room_updated.html', '_blank');
+
+            logNameToSheet(name).finally(() => {
+                btn.disabled = false;
+                statusEl.classList.add('hidden');
+                showNameDisplay(name);
+                window.open('nursing_escape_room_updated.html', '_blank');
+            });
         };
 
         document.getElementById('student-name-input').addEventListener('keypress', e => {
+            if (e.key === 'Enter') document.getElementById('student-password-input').focus();
+        });
+        document.getElementById('student-password-input').addEventListener('keypress', e => {
             if (e.key === 'Enter') document.getElementById('save-name-btn').click();
         });
 
         document.getElementById('change-name-btn').onclick = showNameForm;
 
-        // Begin button (when already logged in)
+        // Begin button (when already logged in) — no password re-check needed, just re-enter
         document.getElementById('begin-btn-logged-in').onclick = () => {
+            logNameToSheet(getStudentName());
             window.open('nursing_escape_room_updated.html', '_blank');
         };
 
