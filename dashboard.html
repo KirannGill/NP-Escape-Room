@@ -77,7 +77,7 @@
 </div>
 
 <script>
-const SHEETS_URL          = 'https://script.google.com/macros/s/AKfycbwbrScc-9wXuBovvFipb22LwQRXnh5xoOd9N6hqqLCw3Ps5UZU3QGHPErNtDNNk4BCIqw/exec';
+const SHEETS_URL          = 'https://script.google.com/macros/s/AKfycbwSEDpEg3n2EZKyKLzu_dK4yYZS3gkm-qJ5QOSfpGQoetVHzQAW34T1TXz7hLgJUzuK/exec';
 const INSTRUCTOR_PASSWORD = 'instructor2025';
 
 document.getElementById('pwd-btn').onclick = () => {
@@ -109,6 +109,57 @@ const caseBadge  = id => ({ anna: 'bg-emerald-500/20 text-emerald-300', tyler: '
 const scoreColor = pct => pct >= 80 ? 'text-green-400' : pct >= 70 ? 'text-yellow-400' : 'text-red-400';
 const passColor  = pf  => pf === 'Pass' ? 'text-green-400' : pf === 'Fail' ? 'text-red-400' : 'text-slate-500';
 const parsePct   = s   => { if (!s || !String(s).includes('/')) return null; const [c,t]=String(s).split('/').map(Number); return t>0?Math.round(c/t*100):null; };
+
+// Handles time values in multiple formats Google Sheets may return:
+// - "10m 27s" (new format — plain text, no conversion)
+// - "10:27" (mm:ss string — if somehow passed through)
+// - "1899-12-30T10:27:00.000Z" (old serial date format from auto-conversion)
+function fmtSheetTime(val) {
+    if (!val) return '—';
+    const s = String(val).trim();
+    if (!s || s === '—') return '—';
+    // Already in "Xm Ys" format
+    if (/^\d+m \d+s$/.test(s)) return s;
+    // Already in mm:ss format
+    if (/^\d{1,2}:\d{2}$/.test(s)) return s;
+    // ISO/serial date string — extract HH:MM from time portion
+    // Sheets stores mm:ss as HH:MM:00 on a base date (1899-12-30 or 1900-01-01)
+    if (s.includes('T')) {
+        const timePart = s.split('T')[1].replace('Z','').split('.')[0];
+        const [h, m] = timePart.split(':').map(Number);
+        return `${h}m ${String(m).padStart(2,'0')}s`;
+    }
+    return s;
+}
+
+function fmtSheetDate(val) {
+    if (!val) return '—';
+    const s = String(val).trim();
+    // ISO datetime — take date part only
+    if (s.includes('T')) return s.split('T')[0];
+    // Already yyyy-MM-dd
+    return s || '—';
+}
+
+function fmtSheetTimestamp(val) {
+    if (!val) return '—';
+    const s = String(val);
+    if (s.includes('T')) {
+        const [date, time] = s.split('T');
+        const t = time.replace('Z','').split('.')[0];
+        return `${date} ${t}`;
+    }
+    return s;
+}
+
+// Percentage stored as 0.9 in sheet — convert to display string
+function fmtPct(val) {
+    if (val === '' || val === null || val === undefined) return null;
+    const n = Number(val);
+    if (isNaN(n)) return null;
+    // If already > 1 it's already a percentage integer
+    return n <= 1 ? Math.round(n * 100) : Math.round(n);
+}
 
 async function loadDashboard() {
     document.getElementById('no-data').classList.add('hidden');
@@ -173,7 +224,7 @@ async function loadDashboard() {
             const key   = 'Case ' + (i+1);
             const score = latest[key+' Score'] || '—';
             const pf    = latest[key+' Pass/Fail'] || '';
-            const time  = latest[key+' Time'] || '—';
+            const time  = fmtSheetTime(latest[key+' Time']);
             const pct   = parsePct(score);
             return `<div class="flex items-center justify-between py-2 border-b border-slate-700/50 text-sm">
                 <span class="text-slate-300 font-medium">${caseLabel(cId)}</span>
@@ -252,8 +303,8 @@ async function loadDashboard() {
             const pct = parsePct(r['Score (Correct/Total)']);
             return `<tr class="border-b border-slate-700/50 hover:bg-slate-700/30 text-sm">
                 <td class="py-3 px-4 text-slate-200 font-medium">${r['Student Name']||''}</td>
-                <td class="py-3 px-4 text-center text-slate-400">${r['Date']||''}</td>
-                <td class="py-3 px-4 text-center text-slate-300">${r['Time Taken (mm:ss)']||'—'}</td>
+                <td class="py-3 px-4 text-center text-slate-400">${fmtSheetDate(r['Date'])}</td>
+                <td class="py-3 px-4 text-center text-slate-300">${fmtSheetTime(r['Time Taken (mm:ss)'])}</td>
                 <td class="py-3 px-4 text-center ${pct!==null?scoreColor(pct):'text-slate-500'} font-bold">${r['Score (Correct/Total)']||'—'} ${pct!==null?'('+pct+'%)':''}</td>
                 <td class="py-3 px-4 text-center ${passColor(r['Pass/Fail']||'')} font-semibold">${r['Pass/Fail']||'—'}</td>
             </tr>`;
@@ -328,8 +379,8 @@ async function loadDashboard() {
                 </tr></thead>
                 <tbody>${[...logins].reverse().map(r=>`<tr class="border-b border-slate-700/50 hover:bg-slate-700/30">
                     <td class="py-3 px-4 text-slate-200 font-medium">${r['Student Name']||''}</td>
-                    <td class="py-3 px-4 text-center text-slate-400">${r['Date']||''}</td>
-                    <td class="py-3 px-4 text-center text-slate-400">${r['Time']||''}</td>
+                    <td class="py-3 px-4 text-center text-slate-400">${fmtSheetDate(r['Date'])}</td>
+                    <td class="py-3 px-4 text-center text-slate-400">${fmtSheetTime(r['Time'])}</td>
                 </tr>`).join('')}</tbody>
             </table>
         </div></div>`;
