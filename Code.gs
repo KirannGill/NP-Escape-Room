@@ -1,12 +1,5 @@
 /**
  * TRU MN-NP Nursing Escape Room — Google Sheets Logger
- * ------------------------------------------------------
- * Deploy this as a Web App (Deploy > New deployment > Web app)
- *   - Execute as: Me
- *   - Who has access: Anyone
- * Copy the resulting /exec URL into home.html and nursing_escape_room_updated.html
- * (search for SHEETS_URL in each file).
- *
  * Tabs created automatically on first run:
  *   - Anna     (one row per attempt at Case 1)
  *   - Tyler    (one row per attempt at Case 2)
