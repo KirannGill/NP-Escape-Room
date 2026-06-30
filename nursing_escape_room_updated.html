@@ -204,7 +204,16 @@
             tyler:  { correct: 0, total: 0, answeredKeys: [] },
             hannah: { correct: 0, total: 0, answeredKeys: [] }
         };
-        const SHEETS_URL = localStorage.getItem('ner_sheets_url') || 'https://script.google.com/macros/s/AKfycby1Tyf3MrFinkXFWqa-XXcBYzUFafB4etj3lH2QanK-K_cZCeAy1pMS2uWH5H2CivX_Ew/exec';
+        // Tracks every wrong/skipped scored question and every unscored decision-point
+        // answer per case, for export to the Google Sheet on case completion.
+        let caseMistakes = JSON.parse(localStorage.getItem('caseMistakes') || 'null') || {
+            anna: [], tyler: [], hannah: []
+        };
+        let caseUnscoredAnswers = JSON.parse(localStorage.getItem('caseUnscoredAnswers') || 'null') || {
+            anna: [], tyler: [], hannah: []
+        };
+        // PASTE your new Google Apps Script Web App URL here (same URL as in home.html's SHEET_WEBHOOK_URL)
+        const SHEETS_URL = localStorage.getItem('ner_sheets_url') || '';
 
         // State Variables
         let currentStep = 0;
@@ -2100,7 +2109,7 @@
                     activity1Score: { correct: log.filter(l=>l.wasCorrect).length, total: log.length }
                 });
                 // Award global score: 1 point per correctly placed symptom card
-                log.forEach((l, i) => awardPoint(`anna-activity1-${i}-${l.name}`, l.wasCorrect));
+                log.forEach((l, i) => awardPoint(`anna-activity1-${i}-${l.name}`, l.wasCorrect, { question: l.name, given: l.placedType, correct: l.correctType }));
                 const correctCount = log.filter(l => l.wasCorrect).length;
                 const reviewRows = log.map(l => `
                     <div class="review-card ${l.wasCorrect ? 'correct-review' : 'incorrect-review'} p-3 rounded-lg mb-2">
@@ -2234,7 +2243,7 @@
                     activity2Score: { correct: log.filter(l=>l.wasCorrect).length, total: log.length }
                 });
                 // Award global score: 1 point per correctly answered MCQ
-                log.forEach((l, i) => awardPoint(`anna-activity2-${i}-${l.question}`, l.wasCorrect));
+                log.forEach((l, i) => awardPoint(`anna-activity2-${i}-${l.question}`, l.wasCorrect, { question: l.question, given: l.chosen, correct: l.correct }));
                 const correctCount = log.filter(l => l.wasCorrect).length;
                 const act2Explanations = [
                     'Subarachnoid hemorrhage classically presents as a sudden "thunderclap" headache — the worst headache of the patient\'s life.',
@@ -2517,9 +2526,9 @@
                     activity3Score: { correct: totalCorrect, total: totalQ }
                 });
                 // Award global score: 1 point per correct answer across all three parts
-                part1Log.forEach((l, i) => awardPoint(`tyler-activity3-p1-${i}-${l.name}`, l.wasCorrect));
-                part2Log.forEach((l, i) => awardPoint(`tyler-activity3-p2-${i}-${l.question}`, l.wasCorrect));
-                part3Log.forEach((l, i) => awardPoint(`tyler-activity3-p3-${i}-${l.question}`, l.wasCorrect));
+                part1Log.forEach((l, i) => awardPoint(`tyler-activity3-p1-${i}-${l.name}`, l.wasCorrect, { question: l.name, given: l.placedType, correct: l.correctType }));
+                part2Log.forEach((l, i) => awardPoint(`tyler-activity3-p2-${i}-${l.question}`, l.wasCorrect, { question: l.question, given: l.given, correct: l.correct, skipped: l.given === '(skipped)' }));
+                part3Log.forEach((l, i) => awardPoint(`tyler-activity3-p3-${i}-${l.question}`, l.wasCorrect, { question: l.question, given: l.given, correct: l.correct }));
 
                 const p1Rows = part1Log.map(l => `
                     <div class="review-card ${l.wasCorrect ? 'correct-review' : 'incorrect-review'} p-3 rounded-lg mb-2">
@@ -2616,6 +2625,7 @@
                                 fb.className = 'mt-4 text-center font-semibold text-red-600';
                                 fb.classList.remove('hidden');
                                 document.querySelectorAll('.anna-approach').forEach(b => { b.disabled = true; if (b.dataset.option === 'a') b.classList.add('ring-2','ring-green-500','bg-green-50'); });
+                                awardPoint('anna-new-patient', false, { question: 'How should you begin the visit with Anna?', given: btn.dataset.option, correct: 'a' });
                                 nextButton.classList.remove('hidden');
                             } else {
                                 fb.textContent = 'That\'s not quite right. You have 1 attempt remaining — try to build rapport with your patient first!';
@@ -2648,6 +2658,7 @@
                                 fb.className = 'mt-4 text-center font-semibold text-red-600';
                                 fb.classList.remove('hidden');
                                 document.querySelectorAll('.anna-next-action').forEach(b => { b.disabled = true; if (b.dataset.option === 'b') b.classList.add('ring-2','ring-green-500','bg-green-50'); });
+                                awardPoint('anna-review-systems', false, { question: 'What should you do next after reviewing systems?', given: btn.dataset.option, correct: 'b' });
                                 nextButton.classList.remove('hidden');
                             } else {
                                 fb.textContent = 'Not quite! You have 1 attempt remaining — there is more information to gather and clinical reasoning to complete.';
@@ -2733,6 +2744,7 @@
                     fb.textContent = 'Diagnoses recorded! (No points are awarded for this free-response question.) Click Next to continue.';
                     fb.className = 'mt-4 text-center font-semibold text-green-600';
                     fb.classList.remove('hidden');
+                    recordUnscoredAnswer('anna', 'Top 3 differential diagnoses (free response)', `1) ${v1}; 2) ${v2}; 3) ${v3}`);
                     nextButton.classList.remove('hidden');
                 };
             }
@@ -2759,6 +2771,7 @@
                                 fb.className = 'mt-4 p-3 bg-red-50 rounded-lg font-semibold text-red-700';
                                 fb.classList.remove('hidden');
                                 document.querySelectorAll('.anna-next-step-option').forEach(b => { b.disabled = true; if (b.dataset.option === 'b') b.classList.add('ring-2','ring-green-500','bg-green-50'); });
+                                awardPoint('anna-next-step', false, { question: 'What is the appropriate next step?', given: btn.dataset.option, correct: 'b' });
                                 nextButton.classList.remove('hidden');
                             } else {
                                 fb.textContent = '❌ Not quite! You have 1 attempt remaining — consider what information you still need before making a final decision.';
@@ -2799,6 +2812,7 @@
                             fb.classList.remove('hidden');
                             document.querySelectorAll('input[name="dp2"]').forEach(r => r.disabled = true);
                             document.getElementById('dp2-submit').disabled = true;
+                            awardPoint('anna-dp2', false, { question: 'Most likely diagnosis ranking for Anna', given: selected.value, correct: 'c' });
                             nextButton.classList.remove('hidden');
                         } else {
                             fb.textContent = '❌ Incorrect. You have 1 attempt remaining — review the patient history and physical exam findings carefully.';
@@ -2837,6 +2851,7 @@
                                 fb.className = 'mt-4 p-4 bg-red-50 rounded-lg font-semibold text-red-700';
                                 fb.classList.remove('hidden');
                                 document.querySelectorAll('.anna-diag-option').forEach(b => { b.disabled = true; if (b.dataset.option === 'd') b.classList.add('ring-2','ring-green-500','bg-green-50'); });
+                                awardPoint('anna-diagnostics', false, { question: 'Which diagnostic work-up would you order for Anna?', given: btn.dataset.option, correct: 'd' });
                                 nextButton.classList.remove('hidden');
                             } else {
                                 fb.textContent = diagMessages[btn.dataset.option] + ' You have 1 attempt remaining — go back to the question and try again.';
@@ -2870,6 +2885,7 @@
                                 fb.className = 'mt-4 p-4 bg-red-50 rounded-lg font-semibold text-red-700';
                                 fb.classList.remove('hidden');
                                 document.querySelectorAll('.anna-pharma-option').forEach(b => { b.disabled = true; if (b.dataset.option === 'a') b.classList.add('ring-2','ring-green-500','bg-green-50'); });
+                                awardPoint('anna-pharma', false, { question: 'Which simple analgesics are appropriate for Anna?', given: btn.dataset.option, correct: 'a' });
                                 nextButton.classList.remove('hidden');
                             } else {
                                 fb.textContent = 'That\'s not quite right. You have 1 attempt remaining — consider what simple analgesics are first-line for tension headaches.';
@@ -2903,6 +2919,7 @@
                                 fb.className = 'mt-4 p-4 bg-red-50 rounded-lg font-semibold text-red-700';
                                 fb.classList.remove('hidden');
                                 document.querySelectorAll('.anna-nonpharma-option').forEach(b => { b.disabled = true; if (b.dataset.option === 'c') b.classList.add('ring-2','ring-green-500'); });
+                                awardPoint('anna-non-pharma', false, { question: 'Which non-pharmacological strategy is appropriate for Anna?', given: btn.dataset.option, correct: 'c' });
                                 nextButton.classList.remove('hidden');
                             } else {
                                 fb.textContent = 'Not quite. You have 1 attempt remaining — think about evidence-based physical and lifestyle approaches for tension headaches.';
@@ -3010,7 +3027,6 @@
             if (step.type === 'final-congrats') {
                 nextButton.classList.add('hidden');
                 finishCaseTimer('tyler');
-                markCaseCompleted('tyler');
                 // Calculate Tyler's case score
                 const tylerScore = caseScores.tyler.correct;
                 const tylerTotal = caseScores.tyler.total;
@@ -3083,6 +3099,7 @@
                             fb.className = 'mt-4 p-4 bg-red-50 rounded-lg font-semibold text-red-700';
                             document.querySelectorAll('input[name="diagnosis3"]').forEach(r => r.disabled = true);
                             document.getElementById('submit-decision').disabled = true;
+                            awardPoint('tyler-decision-point-3', false, { question: 'What is the next step in managing Tyler?', given: selectedOption.value, correct: 'd' });
                             nextButton.classList.remove('hidden');
                         } else {
                             fb.textContent = 'Incorrect. ' + (msgs[selectedOption.value] || '') + ' You have 1 attempt remaining.';
@@ -3137,6 +3154,7 @@
                                 feedbackDiv.className = 'mt-4 text-center font-semibold text-red-600';
                                 feedbackDiv.classList.remove('hidden');
                                 document.querySelectorAll('.approach-option').forEach(o => { o.disabled = true; if (o.dataset.option === 'b') o.classList.add('ring-2','ring-green-500','bg-green-50'); });
+                                awardPoint('hannah-second-patient-intro', false, { question: 'What is the best approach with Hannah?', given: option.dataset.option, correct: 'b' });
                                 nextButton.classList.remove('hidden');
                             } else {
                                 feedbackDiv.textContent = 'She seems anxious — you have 1 attempt remaining. Think about what would best help an anxious patient.';
@@ -3172,7 +3190,10 @@
                             const correctLabels = { q1: 'A', q2: 'B', q3: 'B', q4: 'D', q5: 'D' };
                             feedbackDiv.innerHTML = `❌ Incorrect after 2 attempts. You got ${correctCount} out of 5. <strong>Correct answers: Q1=A, Q2=B, Q3=B, Q4=D, Q5=D.</strong> Points awarded for questions you got right.`;
                             feedbackDiv.className = 'mt-4 text-center font-semibold text-red-600'; feedbackDiv.classList.remove('hidden');
-                            Object.keys(correctAnswers).forEach(q => { if (answers[q] && answers[q].value === correctAnswers[q]) awardPoint(`hannah-video-quiz-${q}`, true); });
+                            Object.keys(correctAnswers).forEach(q => {
+                                const isRight = answers[q] && answers[q].value === correctAnswers[q];
+                                awardPoint(`hannah-video-quiz-${q}`, isRight, { question: `Video quiz ${q.toUpperCase()}`, given: answers[q] ? answers[q].value : '', correct: correctAnswers[q] });
+                            });
                             document.querySelectorAll('input[name="q1"], input[name="q2"], input[name="q3"], input[name="q4"], input[name="q5"]').forEach(r => r.disabled = true);
                             document.getElementById('submit-quiz').disabled = true;
                             nextButton.classList.remove('hidden');
@@ -3187,6 +3208,12 @@
                 // No validation needed, auto-proceed — no points awarded for this reflection question
                 const feedbackDiv = document.getElementById('hannah-dx-feedback');
                 if (feedbackDiv) { feedbackDiv.textContent = 'Selection recorded. (No points are awarded for this question.)'; feedbackDiv.className = 'mt-4 text-center font-semibold text-blue-600'; feedbackDiv.classList.remove('hidden'); }
+                // Record the student's checkbox selections the moment they move on
+                const recordHannahDx = () => {
+                    const checked = Array.from(document.querySelectorAll('input[name="hannah-dx"]:checked')).map(c => c.value);
+                    recordUnscoredAnswer('hannah', 'Top 4 differential diagnoses (selection)', checked.length ? checked.join(', ') : '(none selected)');
+                };
+                nextButton.addEventListener('click', recordHannahDx, { once: true });
             }
 
             if (step.type === 'hannah-decision-point-2') {
@@ -3205,6 +3232,7 @@
                             feedbackDiv.innerHTML = '❌ Incorrect after 2 attempts. <strong>Correct order: 4132</strong> — Migraine (most likely), Medication overuse, Tension, Cluster (least likely).'; feedbackDiv.className = 'mt-4 text-center font-semibold text-red-600'; feedbackDiv.classList.remove('hidden');
                             document.getElementById('order-input').disabled = true;
                             document.getElementById('submit-order').disabled = true;
+                            awardPoint('hannah-decision-point-2', false, { question: 'Rank Hannah\'s differentials in order of likelihood', given: userAnswer, correct: '4132' });
                             nextButton.classList.remove('hidden');
                         } else {
                             feedbackDiv.textContent = 'Incorrect order. You have 1 attempt remaining — review the case details and try again.'; feedbackDiv.className = 'mt-4 text-center font-semibold text-red-600'; feedbackDiv.classList.remove('hidden');
@@ -3216,14 +3244,14 @@
             }
 
             const quizHandlers = {
-                'hannah-quiz-1': { id: 'submit-quiz1', feedbackId: 'quiz1-feedback', name: 'quiz1', correct: 'A', msg: 'This accurately describes the pertinent findings for migraine with aura.' },
-                'hannah-quiz-2': { id: 'submit-quiz2', feedbackId: 'quiz2-feedback', name: 'quiz2', correct: 'B', msg: 'This accurately describes medication overuse headache.' },
-                'hannah-quiz-3': { id: 'submit-quiz3', feedbackId: 'quiz3-feedback', name: 'quiz3', correct: 'B', msg: 'This accurately describes tension-type headaches.' },
-                'hannah-quiz-4': { id: 'submit-quiz4', feedbackId: 'quiz4-feedback', name: 'quiz4', correct: 'D', msg: 'This accurately describes cluster headaches.' },
-                'hannah-quiz-5': { id: 'submit-quiz5', feedbackId: 'quiz5-feedback', name: 'quiz5', correct: '3', msg: 'There are no pertinent negative findings for migraine with aura in this context.' },
-                'hannah-quiz-6': { id: 'submit-quiz6', feedbackId: 'quiz6-feedback', name: 'quiz6', correct: '4', msg: 'Headache characteristics and duration can be variable depending on medication type and impact on the user.' },
-                'hannah-quiz-7': { id: 'submit-quiz7', feedbackId: 'quiz7-feedback', name: 'quiz7', correct: '2', msg: 'The absence of unilateral throbbing pain, aura, nausea, and photophobia/phonophobia is a pertinent negative for tension-type headache.' },
-                'hannah-quiz-8': { id: 'submit-quiz8', feedbackId: 'quiz8-feedback', name: 'quiz8', correct: '4', msg: 'The absence of the typical 10-72 hour throbbing headache pattern is a pertinent negative for cluster headache.' }
+                'hannah-quiz-1': { id: 'submit-quiz1', feedbackId: 'quiz1-feedback', name: 'quiz1', correct: 'A', msg: 'This accurately describes the pertinent findings for migraine with aura.', label: 'Migraine with aura: Pertinent positive findings' },
+                'hannah-quiz-2': { id: 'submit-quiz2', feedbackId: 'quiz2-feedback', name: 'quiz2', correct: 'B', msg: 'This accurately describes medication overuse headache.', label: 'Medication overuse headache: Pertinent positive findings' },
+                'hannah-quiz-3': { id: 'submit-quiz3', feedbackId: 'quiz3-feedback', name: 'quiz3', correct: 'B', msg: 'This accurately describes tension-type headaches.', label: 'Tension-type headache: Pertinent positive findings' },
+                'hannah-quiz-4': { id: 'submit-quiz4', feedbackId: 'quiz4-feedback', name: 'quiz4', correct: 'D', msg: 'This accurately describes cluster headaches.', label: 'Cluster headache: Pertinent positive findings' },
+                'hannah-quiz-5': { id: 'submit-quiz5', feedbackId: 'quiz5-feedback', name: 'quiz5', correct: '3', msg: 'There are no pertinent negative findings for migraine with aura in this context.', label: 'Migraine with aura: Pertinent negative findings' },
+                'hannah-quiz-6': { id: 'submit-quiz6', feedbackId: 'quiz6-feedback', name: 'quiz6', correct: '4', msg: 'Headache characteristics and duration can be variable depending on medication type and impact on the user.', label: 'Medication overuse headache: Pertinent negative findings' },
+                'hannah-quiz-7': { id: 'submit-quiz7', feedbackId: 'quiz7-feedback', name: 'quiz7', correct: '2', msg: 'The absence of unilateral throbbing pain, aura, nausea, and photophobia/phonophobia is a pertinent negative for tension-type headache.', label: 'Tension-type headache: Pertinent negative findings' },
+                'hannah-quiz-8': { id: 'submit-quiz8', feedbackId: 'quiz8-feedback', name: 'quiz8', correct: '4', msg: 'The absence of the typical 10-72 hour throbbing headache pattern is a pertinent negative for cluster headache.', label: 'Cluster headache: Pertinent negative findings' }
             };
             if (quizHandlers[step.type]) {
                 nextButton.classList.add('hidden');
@@ -3248,6 +3276,7 @@
                             fb.innerHTML = `❌ Incorrect after 2 attempts. <strong>Correct answer: ${h.correct}</strong> — ${h.msg}`; fb.className = 'mt-4 text-center font-semibold text-red-600'; fb.classList.remove('hidden');
                             document.querySelectorAll(`input[name="${h.name}"]`).forEach(r => r.disabled = true);
                             document.getElementById(h.id).disabled = true;
+                            awardPoint(step.type, false, { question: h.label, given: selected.value, correct: h.correct });
                             nextButton.classList.remove('hidden');
                         } else {
                             fb.textContent = 'Incorrect. You have 1 attempt remaining — please review the case details carefully.'; fb.className = 'mt-4 text-center font-semibold text-red-600'; fb.classList.remove('hidden');
@@ -3284,6 +3313,7 @@
                                 fb.className = 'mt-4 p-4 bg-red-50 rounded-lg font-semibold text-red-700';
                                 fb.classList.remove('hidden');
                                 document.querySelectorAll('.hannah-diag-option').forEach(b => { b.disabled = true; if (b.dataset.option === 'c') b.classList.add('ring-2','ring-green-500','bg-green-50'); });
+                                awardPoint('hannah-diagnostics', false, { question: 'What diagnostic work-up would you order for Hannah?', given: btn.dataset.option, correct: 'c' });
                                 nextButton.classList.remove('hidden');
                             } else {
                                 fb.textContent = hannahDiagMessages[btn.dataset.option] + ' You have 1 attempt remaining — go back to the question and try again.';
@@ -3317,6 +3347,7 @@
                                 fb.className = 'mt-4 p-4 bg-red-50 rounded-lg font-semibold text-red-700';
                                 fb.classList.remove('hidden');
                                 document.querySelectorAll('.hannah-pharma1-option').forEach(b => { b.disabled = true; if (b.dataset.option === 'c') b.classList.add('ring-2','ring-green-500','bg-green-50'); });
+                                awardPoint('hannah-pharma-1', false, { question: 'Which acute treatment is appropriate for Hannah?', given: btn.dataset.option, correct: 'c' });
                                 nextButton.classList.remove('hidden');
                             } else {
                                 fb.textContent = 'Not quite. You have 1 attempt remaining — consider what acute migraine therapies are appropriate given Hannah\'s clinical context.';
@@ -3350,6 +3381,7 @@
                                 fb.className = 'mt-4 p-4 bg-red-50 rounded-lg font-semibold text-red-700';
                                 fb.classList.remove('hidden');
                                 document.querySelectorAll('.hannah-contra-option').forEach(b => { b.disabled = true; if (b.dataset.option === 'a') b.classList.add('ring-2','ring-green-500','bg-green-50'); });
+                                awardPoint('hannah-pharma-contraception-q', false, { question: 'What additional consideration is needed for Hannah?', given: btn.dataset.option, correct: 'a' });
                                 nextButton.classList.remove('hidden');
                             } else {
                                 fb.textContent = 'Not quite. You have 1 attempt remaining — think about what else needs to be addressed given Hannah\'s new diagnosis.';
@@ -3383,6 +3415,7 @@
                                 fb.className = 'mt-4 p-4 bg-red-50 rounded-lg font-semibold text-red-700';
                                 fb.classList.remove('hidden');
                                 document.querySelectorAll('.hannah-nonpharma-option').forEach(b => { b.disabled = true; if (b.dataset.option === 'a') b.classList.add('ring-2','ring-green-500'); });
+                                awardPoint('hannah-non-pharma', false, { question: 'Which non-pharmacological strategy is appropriate for Hannah?', given: btn.dataset.option, correct: 'a' });
                                 nextButton.classList.remove('hidden');
                             } else {
                                 fb.textContent = 'Not quite. You have 1 attempt remaining — think about evidence-based physical and lifestyle approaches for migraine prevention.';
@@ -3397,7 +3430,6 @@
             if (step.type === 'hannah-final-congrats') {
                 backButton.classList.add('hidden');
                 finishCaseTimer('hannah');
-                markCaseCompleted('hannah');
                 // Calculate Hannah's case score
                 const hannahScore = caseScores.hannah.correct;
                 const hannahTotal = caseScores.hannah.total;
@@ -3617,12 +3649,14 @@
             localStorage.setItem('activeCaseTimer', activeCaseTimer || '');
             localStorage.setItem('globalScore', JSON.stringify(globalScore));
             localStorage.setItem('caseScores', JSON.stringify(caseScores));
+            localStorage.setItem('caseMistakes', JSON.stringify(caseMistakes));
+            localStorage.setItem('caseUnscoredAnswers', JSON.stringify(caseUnscoredAnswers));
         }
 
         // Award one point for a correct answer to a given question key.
         // Each unique key only ever contributes once to the total (first attempt counted),
         // so retries on the same question never inflate the maximum possible score.
-        function awardPoint(key, isCorrect) {
+        function awardPoint(key, isCorrect, meta = {}) {
             if (!globalScore.answeredKeys.includes(key)) {
                 globalScore.answeredKeys.push(key);
                 globalScore.total++;
@@ -3636,11 +3670,29 @@
                     caseScores[casePrefix].answeredKeys.push(key);
                     caseScores[casePrefix].total++;
                     if (isCorrect) caseScores[casePrefix].correct++;
+                    if (!isCorrect) {
+                        caseMistakes[casePrefix].push({
+                            question: meta.question || key,
+                            given: meta.given || (meta.skipped ? '' : ''),
+                            correct: meta.correct || '',
+                            skipped: !!meta.skipped
+                        });
+                        localStorage.setItem('caseMistakes', JSON.stringify(caseMistakes));
+                    }
                 }
                 saveState();
                 const scoreBadge = document.getElementById('timer-score');
                 if (scoreBadge) scoreBadge.textContent = `⭐ Score: ${globalScore.correct} / ${globalScore.total}`;
             }
+        }
+
+        // Records an answer to a free-text / no-point decision-point question
+        // (e.g. Anna's DP1 free-response, Hannah's checkbox differential list)
+        // for inclusion in the "Unscored Decision Point Answers" sheet column.
+        function recordUnscoredAnswer(caseId, question, answer) {
+            if (!caseUnscoredAnswers[caseId]) caseUnscoredAnswers[caseId] = [];
+            caseUnscoredAnswers[caseId].push({ question, answer });
+            localStorage.setItem('caseUnscoredAnswers', JSON.stringify(caseUnscoredAnswers));
         }
 
         function updateProgressBar() {
@@ -3692,11 +3744,27 @@
         }
 
         function markCaseCompleted(caseId, extraData = {}) {
-            saveStudentCaseData(caseId, {
+            const finalData = {
                 completed: true,
                 caseTime: caseTimers[caseId] || 0,
                 completedAt: new Date().toISOString(),
                 ...extraData
+            };
+            saveStudentCaseData(caseId, finalData);
+
+            // Send the full case result (score, mistakes, unscored answers, time) to the Sheet.
+            const student = getStudentName();
+            const score = finalData.totalScore || caseScores[caseId] || { correct: 0, total: 0 };
+            const loginTimestamp = localStorage.getItem(`${NER_PREFIX}${student}_login_timestamp`) || '';
+            postToSheets('logCaseResult', {
+                studentName: student,
+                caseId,
+                loginTimestamp,
+                completionTimestamp: finalData.completedAt,
+                caseTime: finalData.caseTime,
+                score: { correct: score.correct || 0, total: score.total || 0 },
+                skippedOrIncorrect: caseMistakes[caseId] || [],
+                unscoredAnswers: caseUnscoredAnswers[caseId] || []
             });
         }
 
@@ -3757,7 +3825,7 @@
             fetch(SHEETS_URL, {
                 method: 'POST',
                 mode: 'no-cors', // required for Apps Script
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'text/plain' }, // avoids CORS preflight on Apps Script
                 body: JSON.stringify({ action, ...payload })
             }).catch(() => {}); // silently fail — localStorage is the backup
         }
