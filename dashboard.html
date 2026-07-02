@@ -218,43 +218,93 @@ async function loadDashboard() {
 
     // ── By Student ──────────────────────────────────────────────────────────
     document.getElementById('student-list').innerHTML = studentNames.map(student => {
-        const latest = [...summary].filter(r => r['Student Name'] === student).pop() || {};
-        const studentMistakes = mistakes.filter(m => m['Student Name'] === student);
+        const studentAttempts = summary.filter(r => r['Student Name'] === student);
+        const allMistakes     = mistakes.filter(m => m['Student Name'] === student);
+        const bestPct = studentAttempts.reduce((best, r) => {
+            const p = parsePct(r['Total Score']); return p !== null && p > best ? p : best;
+        }, -1);
+        const latestPF = (studentAttempts[studentAttempts.length - 1] || {})['Total Pass/Fail'] || '';
 
-        const caseRows = ['anna','tyler','hannah'].map((cId,i) => {
-            const key   = 'Case ' + (i+1);
-            const score = latest[key+' Score'] || '—';
-            const pf    = latest[key+' Pass/Fail'] || '';
-            const time  = fmtSheetTime(latest[key+' Time']);
-            const pct   = parsePct(score);
-            return `<div class="flex items-center justify-between py-2 border-b border-slate-700/50 text-sm">
-                <span class="text-slate-300 font-medium">${caseLabel(cId)}</span>
-                <div class="flex items-center gap-4">
-                    <span class="text-slate-400 text-xs"><i class="fas fa-clock mr-1"></i>${time}</span>
-                    ${pct !== null
-                        ? '<span class="' + scoreColor(pct) + ' font-bold">' + score + ' (' + pct + '%)</span>'
-                        : '<span class="text-slate-500 text-xs">Not completed</span>'}
-                    ${pf ? '<span class="' + passColor(pf) + ' text-xs font-semibold">' + (pf==='Pass'?'✓ Pass':'✗ Fail') + '</span>' : ''}
+        const attemptBlocks = studentAttempts.map((attempt, attemptIdx) => {
+            const attemptDate  = fmtSheetDate(attempt['Date']);
+            const attemptLogin = fmtSheetTimestamp(attempt['Time (first login)']);
+            const attemptNum   = attemptIdx + 1;
+            const isLatest     = attemptIdx === studentAttempts.length - 1;
+
+            const caseRows = ['anna','tyler','hannah'].map((cId, i) => {
+                const key   = 'Case ' + (i+1);
+                const score = attempt[key+' Score'] || '';
+                const pf    = attempt[key+' Pass/Fail'] || '';
+                const time  = fmtSheetTime(attempt[key+' Time']);
+                const pct   = parsePct(score);
+                const caseDetail = (cases[cId]||[]).find(r =>
+                    r['Student Name'] === student && fmtSheetDate(r['Date']) === attemptDate);
+                const unscored = caseDetail && caseDetail['Unscored Decision Point Answers']
+                    ? caseDetail['Unscored Decision Point Answers'] : '';
+                return `<div class="py-3 border-b border-slate-700/40">
+                    <div class="flex items-center justify-between text-sm">
+                        <span class="text-slate-300 font-medium">${caseLabel(cId)}</span>
+                        <div class="flex items-center gap-3">
+                            ${time !== '—' ? '<span class="text-slate-500 text-xs"><i class="fas fa-clock mr-1"></i>' + time + '</span>' : ''}
+                            ${pct !== null
+                                ? '<span class="' + scoreColor(pct) + ' font-bold">' + score + ' (' + pct + '%)</span>'
+                                : '<span class="text-slate-600 text-xs italic">Not completed</span>'}
+                            ${pf ? '<span class="' + passColor(pf) + ' text-xs font-semibold">' + (pf==='Pass'?'✓ Pass':'✗ Fail') + '</span>' : ''}
+                        </div>
+                    </div>
+                    ${unscored ? '<p class="text-blue-400 text-xs mt-1 pl-1"><i class="fas fa-comment-dots mr-1"></i>' + unscored + '</p>' : ''}
+                </div>`;
+            }).join('');
+
+            const attemptMistakes = allMistakes.filter(m => fmtSheetDate(m['Date']) === attemptDate);
+            const mistakeHtml = attemptMistakes.length === 0
+                ? '<p class="text-emerald-400 text-sm py-2 italic">✅ No mistakes for this attempt.</p>'
+                : attemptMistakes.map(m => `
+                    <div class="px-3 py-2 rounded-lg border border-red-900/30 bg-red-950/20 mb-2 text-sm">
+                        <p class="text-slate-400 text-xs font-bold uppercase mb-1">${m['Case']||''}</p>
+                        <p class="text-slate-200 font-semibold">${m['Question']||''}</p>
+                        <p class="text-red-300 text-xs mt-1">Selected: <strong>${m['Answer Given (Full Text)']||'(skipped)'}</strong></p>
+                        <p class="text-emerald-400 text-xs mt-0.5">Correct: <strong>${m['Correct Answer']||''}</strong></p>
+                    </div>`).join('');
+
+            const totalScore = attempt['Total Score'] || '';
+            const totalPct2  = parsePct(totalScore);
+            const totalPF2   = attempt['Total Pass/Fail'] || '';
+
+            return `
+            <details class="border rounded-xl overflow-hidden mb-3 ${isLatest ? 'border-blue-600/40' : 'border-slate-600/40'}">
+                <summary class="flex items-center justify-between px-4 py-3 hover:bg-slate-700/20 cursor-pointer transition-colors ${isLatest ? 'bg-blue-950/20' : 'bg-slate-800/50'}">
+                    <div class="flex items-center gap-3">
+                        <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${isLatest ? 'bg-blue-600/50 text-blue-200' : 'bg-slate-600/50 text-slate-300'}">
+                            ${attemptNum}
+                        </div>
+                        <div>
+                            <p class="text-slate-200 text-sm font-semibold">
+                                Attempt ${attemptNum} — ${attemptDate}
+                                ${isLatest ? '<span class="ml-2 text-xs text-blue-400 font-normal">(latest)</span>' : ''}
+                            </p>
+                            <p class="text-slate-500 text-xs">Login: ${attemptLogin} · ${attemptMistakes.length} mistake${attemptMistakes.length!==1?'s':''}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        ${totalPct2 !== null
+                            ? '<span class="' + scoreColor(totalPct2) + ' font-bold text-sm">' + totalScore + ' (' + totalPct2 + '%)</span>'
+                            : '<span class="text-slate-600 text-xs italic">In progress</span>'}
+                        ${totalPF2 ? '<span class="' + passColor(totalPF2) + ' text-xs font-semibold">' + (totalPF2==='Pass'?'✓ Pass':'✗ Fail') + '</span>' : ''}
+                        <i class="fas fa-chevron-down text-slate-500 text-xs"></i>
+                    </div>
+                </summary>
+                <div class="px-4 pb-4 bg-slate-800/30">
+                    <div class="mb-3">${caseRows}</div>
+                    <details class="mt-3">
+                        <summary class="text-slate-400 text-xs font-semibold cursor-pointer hover:text-white py-1">
+                            <i class="fas fa-times-circle text-red-400 mr-1"></i> Mistakes (${attemptMistakes.length})
+                        </summary>
+                        <div class="mt-2">${mistakeHtml}</div>
+                    </details>
                 </div>
-            </div>`;
+            </details>`;
         }).join('');
-
-        const mistakeHtml = studentMistakes.length === 0
-            ? '<p class="text-emerald-400 text-sm py-3 italic">✅ No mistakes recorded.</p>'
-            : studentMistakes.map(m => `
-                <div class="px-4 py-3 rounded-lg border border-red-900/30 bg-red-950/20 mb-2">
-                    <p class="text-slate-400 text-xs font-bold uppercase mb-1">${m['Case']||''}</p>
-                    <p class="text-slate-200 text-sm font-semibold">${m['Question']||''}</p>
-                    <p class="text-red-300 text-xs mt-1">Selected: <strong>${m['Answer Given (Full Text)']||'(skipped)'}</strong></p>
-                    <p class="text-emerald-400 text-xs mt-0.5">Correct: <strong>${m['Correct Answer']||''}</strong></p>
-                </div>`).join('');
-
-        const unscoredAll = ['anna','tyler','hannah'].flatMap(cId =>
-            (cases[cId]||[]).filter(r => r['Student Name']===student && r['Unscored Decision Point Answers'])
-                .map(r => ({ case: caseFull(cId), answer: r['Unscored Decision Point Answers'] })));
-
-        const totalPct = parsePct(latest['Total Score']);
-        const totalPF  = latest['Total Pass/Fail'] || '';
 
         return `
         <details class="bg-slate-800 border border-slate-600 rounded-xl overflow-hidden">
@@ -265,32 +315,17 @@ async function loadDashboard() {
                     </div>
                     <div>
                         <p class="text-white font-bold">${student}</p>
-                        <p class="text-slate-400 text-xs">${studentMistakes.length} mistake${studentMistakes.length!==1?'s':''} across all cases</p>
+                        <p class="text-slate-400 text-xs">${studentAttempts.length} attempt${studentAttempts.length!==1?'s':''} · ${allMistakes.length} total mistake${allMistakes.length!==1?'s':''}</p>
                     </div>
                 </div>
                 <div class="flex items-center gap-4">
-                    ${totalPct !== null ? '<div class="text-right hidden md:block"><p class="text-slate-400 text-xs">Total</p><p class="' + scoreColor(totalPct) + ' font-bold">' + latest['Total Score'] + ' (' + totalPct + '%)</p></div>' : ''}
-                    ${totalPF ? '<span class="' + passColor(totalPF) + ' font-bold text-sm">' + totalPF + '</span>' : ''}
+                    ${bestPct >= 0 ? '<div class="text-right hidden md:block"><p class="text-slate-400 text-xs">Best score</p><p class="' + scoreColor(bestPct) + ' font-bold">' + bestPct + '%</p></div>' : ''}
+                    ${latestPF ? '<span class="' + passColor(latestPF) + ' font-bold text-sm">' + latestPF + ' (latest)</span>' : ''}
                     <i class="fas fa-chevron-down text-slate-400"></i>
                 </div>
             </summary>
-            <div class="px-5 pb-5 border-t border-slate-700">
-                <div class="mb-4 mt-4">${caseRows}</div>
-                <details class="mt-3">
-                    <summary class="text-slate-400 text-sm font-semibold cursor-pointer hover:text-white">
-                        <i class="fas fa-times-circle text-red-400 mr-1"></i> Mistakes (${studentMistakes.length})
-                    </summary>
-                    <div class="mt-3">${mistakeHtml}</div>
-                </details>
-                ${unscoredAll.length > 0 ? `
-                <details class="mt-3">
-                    <summary class="text-slate-400 text-sm font-semibold cursor-pointer hover:text-white">
-                        <i class="fas fa-comment-dots text-blue-400 mr-1"></i> Unscored Decision Point Answers (${unscoredAll.length})
-                    </summary>
-                    <div class="mt-3 space-y-2">
-                        ${unscoredAll.map(u=>`<div class="px-4 py-3 bg-blue-950/30 border border-blue-900/30 rounded-lg text-sm"><p class="text-blue-300 text-xs font-bold mb-1">${u.case}</p><p class="text-slate-300">${u.answer}</p></div>`).join('')}
-                    </div>
-                </details>` : ''}
+            <div class="px-5 pb-5 border-t border-slate-700 pt-4">
+                ${attemptBlocks}
             </div>
         </details>`;
     }).join('');
