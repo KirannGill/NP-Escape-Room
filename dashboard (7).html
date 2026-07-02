@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instructor Dashboard — Nursing Escape Room</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+        .tab-btn.active { background: #1d4ed8; color: white; }
+        details summary::-webkit-details-marker { display: none; }
+        @media print { .no-print { display: none !important; } body { background: white; color: black; } }
+    </style>
+</head>
+<body class="p-6">
+
+<!-- Password Gate -->
+<div id="password-gate" class="flex items-center justify-center min-h-screen">
+    <div class="bg-slate-800 border border-slate-600 rounded-2xl p-10 w-full max-w-md text-center">
+        <i class="fas fa-lock text-blue-400 text-4xl mb-4"></i>
+        <h2 class="text-white text-2xl font-bold mb-2">Instructor Dashboard</h2>
+        <p class="text-slate-400 text-sm mb-6">Enter the instructor password to continue.</p>
+        <input type="password" id="pwd-input"
+            class="w-full px-4 py-3 bg-slate-700 border border-slate-500 text-white rounded-xl mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Password">
+        <button id="pwd-btn" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold transition-colors">
+            Enter Dashboard
+        </button>
+        <p id="pwd-error" class="text-red-400 text-sm mt-3 hidden">Incorrect password.</p>
+    </div>
+</div>
+
+<!-- Main Dashboard -->
+<div id="dashboard" class="hidden max-w-7xl mx-auto">
+    <div class="flex items-center justify-between mb-8 flex-wrap gap-4">
+        <div>
+            <h1 class="text-3xl font-extrabold text-white">Instructor Dashboard</h1>
+            <p class="text-slate-400 mt-1">Nursing Escape Room — Student Performance Overview</p>
+            <p id="last-refreshed" class="text-slate-600 text-xs mt-1"></p>
+        </div>
+        <div class="flex gap-3 no-print flex-wrap">
+            <button id="refresh-btn" class="px-4 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600 transition-colors text-sm">
+                <i class="fas fa-sync-alt mr-1"></i> Refresh
+            </button>
+            <a href="https://docs.google.com/spreadsheets/d/11BzqSHJMg8oCMQgjJNPMTAXb_WpFrrxmUD3mClg_h_g/edit" target="_blank"
+               class="px-4 py-2 bg-emerald-700 text-white rounded-lg hover:bg-emerald-600 transition-colors text-sm">
+                <i class="fas fa-table mr-1"></i> Open Sheet
+            </button>
+            <button onclick="window.print()" class="px-4 py-2 bg-blue-700 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm no-print">
+                <i class="fas fa-print mr-1"></i> Print
+            </button>
+        </div>
+    </div>
+
+    <div id="summary-stats" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8"></div>
+
+    <div class="flex gap-2 mb-6 no-print flex-wrap">
+        <button type="button" class="tab-btn active px-4 py-2 rounded-lg text-sm font-semibold bg-slate-700 text-slate-300 transition-colors" data-tab="students">By Student</button>
+        <button type="button" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold bg-slate-700 text-slate-300 transition-colors" data-tab="cases">By Case</button>
+        <button type="button" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold bg-slate-700 text-slate-300 transition-colors" data-tab="mistakes">Mistakes Summary</button>
+        <button type="button" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold bg-slate-700 text-slate-300 transition-colors" data-tab="logins">Login Log</button>
+    </div>
+
+    <div id="tab-students" class="tab-content"><div id="student-list" class="space-y-4"></div></div>
+    <div id="tab-cases"    class="tab-content hidden"><div id="case-breakdown" class="space-y-6"></div></div>
+    <div id="tab-mistakes" class="tab-content hidden"><div id="mistakes-summary" class="space-y-6"></div></div>
+    <div id="tab-logins"   class="tab-content hidden"><div id="login-log"></div></div>
+
+    <p id="no-data" class="text-center text-slate-500 py-20 text-lg hidden">
+        <i class="fas fa-inbox text-4xl block mb-3"></i>No student data found yet.
+    </p>
+    <p id="error-msg" class="text-center text-red-400 py-10 hidden">
+        <i class="fas fa-exclamation-triangle mr-2"></i><span id="error-text"></span>
+    </p>
+</div>
+
+<script>
+const SHEETS_URL          = 'https://script.google.com/macros/s/AKfycbwSEDpEg3n2EZKyKLzu_dK4yYZS3gkm-qJ5QOSfpGQoetVHzQAW34T1TXz7hLgJUzuK/exec';
+const INSTRUCTOR_PASSWORD = 'instructor2025';
+
+document.getElementById('pwd-btn').onclick = () => {
+    if (document.getElementById('pwd-input').value === INSTRUCTOR_PASSWORD) {
+        document.getElementById('password-gate').classList.add('hidden');
+        document.getElementById('dashboard').classList.remove('hidden');
+        loadDashboard();
+    } else {
+        document.getElementById('pwd-error').classList.remove('hidden');
+    }
+};
+document.getElementById('pwd-input').addEventListener('keypress', e => {
+    if (e.key === 'Enter') document.getElementById('pwd-btn').click();
+});
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.onclick = (e) => {
+        e.preventDefault();
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+        btn.classList.add('active');
+        document.getElementById('tab-' + btn.dataset.tab).classList.remove('hidden');
+    };
+});
+document.getElementById('refresh-btn').onclick = loadDashboard;
+
+const caseLabel  = id => ({ anna: 'Anna Jacobs', tyler: 'Tyler Haley', hannah: 'Hannah Howard' }[id] || id);
+const caseFull   = id => ({ anna: 'Case 1 — Anna Jacobs', tyler: 'Case 2 — Tyler Haley', hannah: 'Case 3 — Hannah Howard' }[id] || id);
+const caseBadge  = id => ({ anna: 'bg-emerald-500/20 text-emerald-300', tyler: 'bg-blue-500/20 text-blue-300', hannah: 'bg-purple-500/20 text-purple-300' }[id] || '');
+const scoreColor = pct => pct >= 80 ? 'text-green-400' : pct >= 70 ? 'text-yellow-400' : 'text-red-400';
+const passColor  = pf  => pf === 'Pass' ? 'text-green-400' : pf === 'Fail' ? 'text-red-400' : 'text-slate-500';
+const parsePct   = s   => { if (!s || !String(s).includes('/')) return null; const [c,t]=String(s).split('/').map(Number); return t>0?Math.round(c/t*100):null; };
+
+// Handles time values in multiple formats Google Sheets may return:
+// - "10m 27s" (new format — plain text, no conversion)
+// - "10:27" (mm:ss string — if somehow passed through)
+// - "1899-12-30T10:27:00.000Z" (old serial date format from auto-conversion)
+function fmtSheetTime(val) {
+    if (!val) return '—';
+    const s = String(val).trim();
+    if (!s || s === '—') return '—';
+    // Already in "Xm Ys" format
+    if (/^\d+m \d+s$/.test(s)) return s;
+    // Already in mm:ss format
+    if (/^\d{1,2}:\d{2}$/.test(s)) return s;
+    // ISO/serial date string — extract HH:MM from time portion
+    // Sheets stores mm:ss as HH:MM:00 on a base date (1899-12-30 or 1900-01-01)
+    if (s.includes('T')) {
+        const timePart = s.split('T')[1].replace('Z','').split('.')[0];
+        const [h, m] = timePart.split(':').map(Number);
+        return `${h}m ${String(m).padStart(2,'0')}s`;
+    }
+    return s;
+}
+
+function fmtSheetDate(val) {
+    if (!val) return '—';
+    const s = String(val).trim();
+    // ISO datetime — take date part only
+    if (s.includes('T')) return s.split('T')[0];
+    // Already yyyy-MM-dd
+    return s || '—';
+}
+
+function fmtSheetTimestamp(val) {
+    if (!val) return '—';
+    const s = String(val);
+    if (s.includes('T')) {
+        const [date, time] = s.split('T');
+        const t = time.replace('Z','').split('.')[0];
+        return `${date} ${t}`;
+    }
+    return s;
+}
+
+// Percentage stored as 0.9 in sheet — convert to display string
+function fmtPct(val) {
+    if (val === '' || val === null || val === undefined) return null;
+    const n = Number(val);
+    if (isNaN(n)) return null;
+    // If already > 1 it's already a percentage integer
+    return n <= 1 ? Math.round(n * 100) : Math.round(n);
+}
+
+async function loadDashboard() {
+    document.getElementById('no-data').classList.add('hidden');
+    document.getElementById('error-msg').classList.add('hidden');
+    document.getElementById('summary-stats').innerHTML =
+        '<div class="col-span-4 text-center py-8 text-slate-400"><i class="fas fa-spinner fa-spin text-3xl mb-3 block"></i>Fetching live data from Google Sheets…</div>';
+
+    let data;
+    try {
+        const res = await fetch(SHEETS_URL + '?action=getAllData');
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        data = await res.json();
+        if (data.status === 'error') throw new Error(data.message);
+    } catch (err) {
+        document.getElementById('summary-stats').innerHTML = '';
+        document.getElementById('error-msg').classList.remove('hidden');
+        document.getElementById('error-text').textContent =
+            'Could not load data: ' + err.message + '. Ensure the Apps Script is deployed and re-deployed after any code changes.';
+        return;
+    }
+
+    document.getElementById('last-refreshed').textContent = 'Last refreshed: ' + new Date().toLocaleTimeString();
+
+    const summary  = data.summary  || [];
+    const cases    = data.cases    || {};
+    const mistakes = data.mistakes || [];
+    const logins   = data.logins   || [];
+
+    const studentNames = [...new Set(summary.map(r => r['Student Name']).filter(Boolean))].sort();
+    const completedCases = summary.reduce((n,r) =>
+        n + ['Case 1 Score','Case 2 Score','Case 3 Score'].filter(k => r[k]).length, 0);
+    const allPcts  = summary.map(r => parsePct(r['Total Score'])).filter(p => p !== null);
+    const avgPct   = allPcts.length ? Math.round(allPcts.reduce((a,b)=>a+b,0)/allPcts.length) : null;
+    const passCount = summary.filter(r => r['Total Pass/Fail'] === 'Pass').length;
+
+    document.getElementById('summary-stats').innerHTML = `
+        <div class="bg-slate-800 border border-slate-600 rounded-xl p-5">
+            <p class="text-slate-400 text-sm">Total Students</p>
+            <p class="text-white text-3xl font-bold mt-1">${studentNames.length}</p>
+        </div>
+        <div class="bg-slate-800 border border-slate-600 rounded-xl p-5">
+            <p class="text-slate-400 text-sm">Cases Completed</p>
+            <p class="text-white text-3xl font-bold mt-1">${completedCases}</p>
+        </div>
+        <div class="bg-slate-800 border border-slate-600 rounded-xl p-5">
+            <p class="text-slate-400 text-sm">Avg. Total Score</p>
+            <p class="${avgPct !== null ? scoreColor(avgPct) : 'text-slate-500'} text-3xl font-bold mt-1">${avgPct !== null ? avgPct+'%' : '—'}</p>
+        </div>
+        <div class="bg-slate-800 border border-slate-600 rounded-xl p-5">
+            <p class="text-slate-400 text-sm">Fully Passed (all 3)</p>
+            <p class="text-green-400 text-3xl font-bold mt-1">${passCount}</p>
+        </div>`;
+
+    if (studentNames.length === 0) { document.getElementById('no-data').classList.remove('hidden'); return; }
+
+    // ── By Student ──────────────────────────────────────────────────────────
+    document.getElementById('student-list').innerHTML = studentNames.map(student => {
+        const studentAttempts = summary.filter(r => r['Student Name'] === student);
+        const allMistakes     = mistakes.filter(m => m['Student Name'] === student);
+        const bestPct = studentAttempts.reduce((best, r) => {
+            const p = parsePct(r['Total Score']); return p !== null && p > best ? p : best;
+        }, -1);
+        const latestPF = (studentAttempts[studentAttempts.length - 1] || {})['Total Pass/Fail'] || '';
+
+        const attemptBlocks = studentAttempts.map((attempt, attemptIdx) => {
+            const attemptDate  = fmtSheetDate(attempt['Date']);
+            const attemptLogin = fmtSheetTimestamp(attempt['Time (first login)']);
+            const attemptNum   = attemptIdx + 1;
+            const isLatest     = attemptIdx === studentAttempts.length - 1;
+
+            const caseRows = ['anna','tyler','hannah'].map((cId, i) => {
+                const key   = 'Case ' + (i+1);
+                const score = attempt[key+' Score'] || '';
+                const pf    = attempt[key+' Pass/Fail'] || '';
+                const time  = fmtSheetTime(attempt[key+' Time']);
+                const pct   = parsePct(score);
+                const caseDetail = (cases[cId]||[]).find(r =>
+                    r['Student Name'] === student && fmtSheetDate(r['Date']) === attemptDate);
+                const unscored = caseDetail && caseDetail['Unscored Decision Point Answers']
+                    ? caseDetail['Unscored Decision Point Answers'] : '';
+                return `<div class="py-3 border-b border-slate-700/40">
+                    <div class="flex items-center justify-between text-sm">
+                        <span class="text-slate-300 font-medium">${caseLabel(cId)}</span>
+                        <div class="flex items-center gap-3">
+                            ${time !== '—' ? '<span class="text-slate-500 text-xs"><i class="fas fa-clock mr-1"></i>' + time + '</span>' : ''}
+                            ${pct !== null
+                                ? '<span class="' + scoreColor(pct) + ' font-bold">' + score + ' (' + pct + '%)</span>'
+                                : '<span class="text-slate-600 text-xs italic">Not completed</span>'}
+                            ${pf ? '<span class="' + passColor(pf) + ' text-xs font-semibold">' + (pf==='Pass'?'✓ Pass':'✗ Fail') + '</span>' : ''}
+                        </div>
+                    </div>
+                    ${unscored ? '<p class="text-blue-400 text-xs mt-1 pl-1"><i class="fas fa-comment-dots mr-1"></i>' + unscored + '</p>' : ''}
+                </div>`;
+            }).join('');
+
+            // Match by login timestamp for precision — handles multiple attempts on same day.
+            // Falls back to date-only matching for older rows that predate the Login Timestamp column.
+            const attemptMistakes = allMistakes.filter(m => {
+                const mLogin = m['Login Timestamp'] ? fmtSheetTimestamp(m['Login Timestamp']) : null;
+                if (mLogin) return mLogin === attemptLogin;
+                return fmtSheetDate(m['Date']) === attemptDate; // legacy fallback
+            });
+            const mistakeHtml = attemptMistakes.length === 0
+                ? '<p class="text-emerald-400 text-sm py-2 italic">✅ No mistakes for this attempt.</p>'
+                : attemptMistakes.map(m => `
+                    <div class="px-3 py-2 rounded-lg border border-red-900/30 bg-red-950/20 mb-2 text-sm">
+                        <p class="text-slate-400 text-xs font-bold uppercase mb-1">${m['Case']||''}</p>
+                        <p class="text-slate-200 font-semibold">${m['Question']||''}</p>
+                        <p class="text-red-300 text-xs mt-1">Selected: <strong>${m['Answer Given (Full Text)']||'(skipped)'}</strong></p>
+                        <p class="text-emerald-400 text-xs mt-0.5">Correct: <strong>${m['Correct Answer']||''}</strong></p>
+                    </div>`).join('');
+
+            const totalScore = attempt['Total Score'] || '';
+            const totalPct2  = parsePct(totalScore);
+            const totalPF2   = attempt['Total Pass/Fail'] || '';
+
+            return `
+            <details class="border rounded-xl overflow-hidden mb-3 ${isLatest ? 'border-blue-600/40' : 'border-slate-600/40'}">
+                <summary class="flex items-center justify-between px-4 py-3 hover:bg-slate-700/20 cursor-pointer transition-colors ${isLatest ? 'bg-blue-950/20' : 'bg-slate-800/50'}">
+                    <div class="flex items-center gap-3">
+                        <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${isLatest ? 'bg-blue-600/50 text-blue-200' : 'bg-slate-600/50 text-slate-300'}">
+                            ${attemptNum}
+                        </div>
+                        <div>
+                            <p class="text-slate-200 text-sm font-semibold">
+                                Attempt ${attemptNum} — ${attemptDate}
+                                ${isLatest ? '<span class="ml-2 text-xs text-blue-400 font-normal">(latest)</span>' : ''}
+                            </p>
+                            <p class="text-slate-500 text-xs">Login: ${attemptLogin} · ${attemptMistakes.length} mistake${attemptMistakes.length!==1?'s':''}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        ${totalPct2 !== null
+                            ? '<span class="' + scoreColor(totalPct2) + ' font-bold text-sm">' + totalScore + ' (' + totalPct2 + '%)</span>'
+                            : '<span class="text-slate-600 text-xs italic">In progress</span>'}
+                        ${totalPF2 ? '<span class="' + passColor(totalPF2) + ' text-xs font-semibold">' + (totalPF2==='Pass'?'✓ Pass':'✗ Fail') + '</span>' : ''}
+                        <i class="fas fa-chevron-down text-slate-500 text-xs"></i>
+                    </div>
+                </summary>
+                <div class="px-4 pb-4 bg-slate-800/30">
+                    <div class="mb-3">${caseRows}</div>
+                    <details class="mt-3">
+                        <summary class="text-slate-400 text-xs font-semibold cursor-pointer hover:text-white py-1">
+                            <i class="fas fa-times-circle text-red-400 mr-1"></i> Mistakes (${attemptMistakes.length})
+                        </summary>
+                        <div class="mt-2">${mistakeHtml}</div>
+                    </details>
+                </div>
+            </details>`;
+        }).join('');
+
+        return `
+        <details class="bg-slate-800 border border-slate-600 rounded-xl overflow-hidden">
+            <summary class="flex items-center justify-between p-5 hover:bg-slate-700/30 cursor-pointer transition-colors">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-blue-600/30 rounded-full flex items-center justify-center text-blue-300 font-bold text-lg">
+                        ${student.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                        <p class="text-white font-bold">${student}</p>
+                        <p class="text-slate-400 text-xs">${studentAttempts.length} attempt${studentAttempts.length!==1?'s':''} · ${allMistakes.length} total mistake${allMistakes.length!==1?'s':''}</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4">
+                    ${bestPct >= 0 ? '<div class="text-right hidden md:block"><p class="text-slate-400 text-xs">Best score</p><p class="' + scoreColor(bestPct) + ' font-bold">' + bestPct + '%</p></div>' : ''}
+                    ${latestPF ? '<span class="' + passColor(latestPF) + ' font-bold text-sm">' + latestPF + ' (latest)</span>' : ''}
+                    <i class="fas fa-chevron-down text-slate-400"></i>
+                </div>
+            </summary>
+            <div class="px-5 pb-5 border-t border-slate-700 pt-4">
+                ${attemptBlocks}
+            </div>
+        </details>`;
+    }).join('');
+
+    // ── By Case ─────────────────────────────────────────────────────────────
+    document.getElementById('case-breakdown').innerHTML = ['anna','tyler','hannah'].map((cId,i) => {
+        const rows = cases[cId] || [];
+        if (!rows.length) return `<div class="bg-slate-800 border border-slate-600 rounded-xl p-6"><span class="px-3 py-1 rounded-full text-sm font-bold ${caseBadge(cId)}">${caseLabel(cId)}</span><p class="text-slate-500 text-sm italic mt-3">No data yet.</p></div>`;
+        const passPct = Math.round(rows.filter(r=>r['Pass/Fail']==='Pass').length/rows.length*100);
+        const tableRows = rows.map(r => {
+            const pct = parsePct(r['Score (Correct/Total)']);
+            return `<tr class="border-b border-slate-700/50 hover:bg-slate-700/30 text-sm">
+                <td class="py-3 px-4 text-slate-200 font-medium">${r['Student Name']||''}</td>
+                <td class="py-3 px-4 text-center text-slate-400">${fmtSheetDate(r['Date'])}</td>
+                <td class="py-3 px-4 text-center text-slate-300">${fmtSheetTime(r['Time Taken (mm:ss)'])}</td>
+                <td class="py-3 px-4 text-center ${pct!==null?scoreColor(pct):'text-slate-500'} font-bold">${r['Score (Correct/Total)']||'—'} ${pct!==null?'('+pct+'%)':''}</td>
+                <td class="py-3 px-4 text-center ${passColor(r['Pass/Fail']||'')} font-semibold">${r['Pass/Fail']||'—'}</td>
+            </tr>`;
+        }).join('');
+        return `<div class="bg-slate-800 border border-slate-600 rounded-xl overflow-hidden">
+            <div class="flex items-center justify-between p-5 border-b border-slate-700">
+                <div class="flex items-center gap-3">
+                    <span class="px-3 py-1 rounded-full text-sm font-bold ${caseBadge(cId)}">${caseLabel(cId)}</span>
+                    <span class="text-slate-400 text-sm">${rows.length} attempt${rows.length!==1?'s':''}</span>
+                </div>
+                <span class="text-sm ${scoreColor(passPct)} font-semibold">${passPct}% pass rate</span>
+            </div>
+            <div class="overflow-x-auto"><table class="w-full text-sm">
+                <thead><tr class="text-slate-400 text-xs uppercase tracking-wide border-b border-slate-700 bg-slate-900/50">
+                    <th class="text-left py-3 px-4">Student</th><th class="py-3 px-4">Date</th>
+                    <th class="py-3 px-4">Time</th><th class="py-3 px-4">Score</th><th class="py-3 px-4">Pass/Fail</th>
+                </tr></thead><tbody>${tableRows}</tbody>
+            </table></div>
+        </div>`;
+    }).join('');
+
+    // ── Mistakes Summary ─────────────────────────────────────────────────────
+    const byQ = {};
+    mistakes.forEach(m => {
+        const k = (m['Case']||'') + '||' + (m['Question']||'');
+        if (!byQ[k]) byQ[k] = { case: m['Case']||'', question: m['Question']||'', correct: m['Correct Answer']||'', entries: [] };
+        byQ[k].entries.push({ student: m['Student Name']||'', given: m['Answer Given (Full Text)']||'(skipped)' });
+    });
+    const byCase = {};
+    Object.values(byQ).forEach(q => { if (!byCase[q.case]) byCase[q.case]=[]; byCase[q.case].push(q); });
+
+    document.getElementById('mistakes-summary').innerHTML = Object.keys(byCase).length === 0
+        ? '<p class="text-slate-500 text-sm italic text-center py-10">No mistake data yet.</p>'
+        : Object.entries(byCase).sort(([a],[b])=>a.localeCompare(b)).map(([caseName, qs]) => `
+            <div class="bg-slate-800 border border-slate-600 rounded-xl overflow-hidden">
+                <div class="p-5 border-b border-slate-700 flex items-center justify-between">
+                    <h3 class="text-white font-bold">${caseName}</h3>
+                    <span class="text-slate-400 text-sm">${qs.reduce((n,q)=>n+q.entries.length,0)} errors across ${qs.length} question${qs.length!==1?'s':''}</span>
+                </div>
+                <div class="divide-y divide-slate-700/50">
+                    ${qs.sort((a,b)=>b.entries.length-a.entries.length).map(q=>`
+                        <div class="p-5">
+                            <div class="flex items-start justify-between gap-4">
+                                <div class="flex-1">
+                                    <p class="text-slate-200 text-sm font-semibold mb-1">${q.question}</p>
+                                    <p class="text-emerald-400 text-xs mb-2">✓ Correct: <strong>${q.correct}</strong></p>
+                                    <details>
+                                        <summary class="text-slate-500 text-xs cursor-pointer hover:text-slate-300">
+                                            Who answered what (${q.entries.length} student${q.entries.length!==1?'s':''})
+                                        </summary>
+                                        <div class="mt-2 space-y-1">
+                                            ${q.entries.map(e=>`<div class="text-xs text-slate-400 pl-3 border-l border-slate-700"><span class="text-slate-300 font-semibold">${e.student}</span> → <span class="text-red-300">${e.given}</span></div>`).join('')}
+                                        </div>
+                                    </details>
+                                </div>
+                                <div class="text-center bg-red-950/40 border border-red-900/30 rounded-lg px-3 py-2 min-w-[56px]">
+                                    <p class="text-red-400 text-xl font-bold">${q.entries.length}</p>
+                                    <p class="text-red-500 text-xs">student${q.entries.length!==1?'s':''}</p>
+                                </div>
+                            </div>
+                        </div>`).join('')}
+                </div>
+            </div>`).join('');
+
+    // ── Login Log ────────────────────────────────────────────────────────────
+    document.getElementById('login-log').innerHTML = logins.length === 0
+        ? '<p class="text-slate-500 text-sm italic text-center py-10">No login data yet.</p>'
+        : `<div class="bg-slate-800 border border-slate-600 rounded-xl overflow-hidden"><div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead><tr class="text-slate-400 text-xs uppercase tracking-wide border-b border-slate-700 bg-slate-900/50">
+                    <th class="text-left py-3 px-4">Student</th><th class="py-3 px-4">Date</th><th class="py-3 px-4">Time</th>
+                </tr></thead>
+                <tbody>${[...logins].reverse().map(r=>`<tr class="border-b border-slate-700/50 hover:bg-slate-700/30">
+                    <td class="py-3 px-4 text-slate-200 font-medium">${r['Student Name']||''}</td>
+                    <td class="py-3 px-4 text-center text-slate-400">${fmtSheetDate(r['Date'])}</td>
+                    <td class="py-3 px-4 text-center text-slate-400">${fmtSheetTimestamp(r['Time']).split(' ')[1] || fmtSheetTimestamp(r['Time'])}</td>
+                </tr>`).join('')}</tbody>
+            </table>
+        </div></div>`;
+}
+</script>
+</body>
+</html>
