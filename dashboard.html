@@ -377,6 +377,7 @@ async function loadDashboard() {
     });
     const byCase = {};
     Object.values(byQ).forEach(q => { if (!byCase[q.case]) byCase[q.case]=[]; byCase[q.case].push(q); });
+
     document.getElementById('mistakes-summary').innerHTML = Object.keys(byCase).length === 0
         ? '<p class="text-slate-500 text-sm italic text-center py-10">No mistake data yet.</p>'
         : Object.entries(byCase).sort(([a],[b])=>a.localeCompare(b)).map(([caseName, qs]) => `
