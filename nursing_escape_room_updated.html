@@ -130,6 +130,16 @@
 		}
 		
         .code-banner { animation: codePulse 1.8s ease-in-out 3; }
+        /* Leave room so the fixed timer strip never covers the page's buttons */
+        .main-container { margin-bottom: 4.5rem; }
+        /* The timer strip is display-only: let clicks and drag-and-drop pass through to the page */
+        #case-timers { pointer-events: none; }
+        /* Keep the timer strip on one compact line (it used to wrap and cover content on phones) */
+        #case-timers { width: max-content; max-width: calc(100vw - 2rem); flex-wrap: nowrap; }
+        @media (max-width: 640px) {
+            #case-timers { bottom: 0.5rem; padding: 0.35rem 0.5rem; gap: 0.4rem; }
+            .case-timer-badge { font-size: 0.7rem; padding: 0.25rem 0.5rem; }
+        }
     </style>
 </head>
 <body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
@@ -148,7 +158,7 @@
             <span>Logged in as: <strong id="banner-student-name" class="text-white"></strong></span>
         </div>
         <a href="home.html" class="text-blue-400 hover:text-blue-300 transition-colors text-xs">
-            <i class="fas fa-home mr-1"></i>Back to Home
+            <i class="fas fa-home mr-1"></i>Back to Dashboard
         </a>
     </div>
 
@@ -195,61 +205,115 @@
         const modalMessage = document.getElementById('modal-message');
         const modalCloseBtn = document.getElementById('modal-close-btn');
         if (modalCloseBtn) { modalCloseBtn.onclick = () => modal.classList.add('hidden'); }
-        const timerDisplay = document.getElementById('timer-display'); if(timerDisplay) timerDisplay.classList.remove('hidden');
+        const timerDisplay = document.getElementById('timer-display');
 
         const NER_PREFIX = 'ner_';
-        let globalScore = JSON.parse(localStorage.getItem('globalScore')) || { correct: 0, total: 0, answeredKeys: [] };
-        let caseScores = JSON.parse(localStorage.getItem('caseScores')) || {
-            anna:   { correct: 0, total: 0, answeredKeys: [] },
-            tyler:  { correct: 0, total: 0, answeredKeys: [] },
-            hannah: { correct: 0, total: 0, answeredKeys: [] }
-        };
-        // Tracks every wrong/skipped scored question and every unscored decision-point
-        // answer per case, for export to the Google Sheet on case completion.
-        let caseMistakes = JSON.parse(localStorage.getItem('caseMistakes') || 'null') || {
-            anna: [], tyler: [], hannah: []
-        };
-        let caseUnscoredAnswers = JSON.parse(localStorage.getItem('caseUnscoredAnswers') || 'null') || {
-            anna: [], tyler: [], hannah: []
-        };
-        const SHEETS_URL = localStorage.getItem('ner_sheets_url') || 'https://script.google.com/macros/s/AKfycbwSEDpEg3n2EZKyKLzu_dK4yYZS3gkm-qJ5QOSfpGQoetVHzQAW34T1TXz7hLgJUzuK/exec';
 
-        // State Variables
-        let currentStep = 0;
-        let mainTimerInterval = null;
-        let mainTimeElapsed = parseInt(localStorage.getItem('mainTimeElapsed')) || 0;
-        let correctCodesEntered = JSON.parse(localStorage.getItem('correctCodesEntered') || '{}') || {
-            activity1: false, activity2: false
+        // =====================================================================
+        // CASE + STUDENT SELECTION
+        // Each case runs on its own tab: nursing_escape_room_updated.html?case=anna|tyler|hannah
+        // Progress is saved per student, per case, in this browser (localStorage).
+        // =====================================================================
+        const CASE_IDS = ['anna', 'tyler', 'hannah'];
+        const CASE_INFO = {
+            anna:   { num: 1, name: 'Anna Jacobs',   title: 'Headache Case 1: Anna Jacobs' },
+            tyler:  { num: 2, name: 'Tyler Haley',   title: 'Headache Case 2: Tyler Haley' },
+            hannah: { num: 3, name: 'Hannah Howard', title: 'Headache Case 3: Hannah Howard' }
         };
-        let enteredCodes = JSON.parse(localStorage.getItem('enteredCodes') || '{}') || {
-            activity1: '', activity2: ''
-        };
-        let activityScores = JSON.parse(localStorage.getItem('activityScores')) || {
-            activity1: { correct: 0, total: 0 },
-            activity2: { correct: 0, total: 10 },
-            activity3: { correct: 0, total: 10 }
-        };
-        let inPatientChart = localStorage.getItem('inPatientChart') === 'true' || false;
-        let currentChartStep = parseInt(localStorage.getItem('currentChartStep')) || 0;
-        let inSecondPatient = localStorage.getItem('inSecondPatient') === 'true' || false;
-        let currentSecondPatientStep = parseInt(localStorage.getItem('currentSecondPatientStep')) || 0;
-        // NEW: Anna patient state
-        let inAnnaPatient = localStorage.getItem('inAnnaPatient') === 'true' || false;
-        let currentAnnaStep = parseInt(localStorage.getItem('currentAnnaStep')) || 0;
+        const urlCase = new URLSearchParams(window.location.search).get('case');
+        const CASE = CASE_IDS.includes(urlCase) ? urlCase : null;
+        const STUDENT = (localStorage.getItem('ner_current_student') || '').trim();
+        const BOOT_OK = !!(CASE && STUDENT);
+        const PROGRESS_KEY = `ner_v2_progress::${STUDENT}::${CASE}`;
 
-        // Case timers (seconds elapsed per case)
-        let caseTimers = JSON.parse(localStorage.getItem('caseTimers')) || { anna: 0, tyler: 0, hannah: 0 };
-        let caseTimerDone = JSON.parse(localStorage.getItem('caseTimerDone')) || { anna: false, tyler: false, hannah: false };
-        let activeCaseTimer = localStorage.getItem('activeCaseTimer') || null;
-        let caseTimerInterval = null;
-
+        // Codes students write down. Case 2 asks for activity1 + activity2 (earned in Case 1).
+        // Case 3 asks for activity3 (earned in Case 2).
         const activityCodes = {
             activity1: 'MIGRAINE',
-            activity2: 'THUNDER'
+            activity2: 'THUNDER',
+            activity3: 'SNNOOP'
+        };
+        const CASE_GATES = {
+            tyler:  { from: 'Case 1 (Anna Jacobs)', codes: [
+                        { key: 'activity1', label: 'Activity 1 Code' },
+                        { key: 'activity2', label: 'Activity 2 Code' } ] },
+            hannah: { from: 'Case 2 (Tyler Haley)', codes: [
+                        { key: 'activity3', label: 'Activity 3 Code' } ] }
         };
 
-        let currentQuestionIndex = parseInt(localStorage.getItem('currentQuestionIndex_activity2')) || 0;
-        let activity2CorrectCount = parseInt(localStorage.getItem('activity2CorrectCount')) || 0;
+        function freshProgress() {
+            return {
+                v: 2,
+                step: 0,            // page the student is on
+                furthest: 0,        // furthest page reached (pages before this are completed)
+                answered: {},       // pages whose question has been answered: { [index]: true }
+                unlocked: CASE === 'anna', // Case 2/3 must be unlocked with codes first
+                score: { correct: 0, total: 0, answeredKeys: [] },
+                mistakes: [],
+                unscored: [],
+                time: 0,
+                timerDone: false,
+                codes: {},
+                activityScores: {
+                    activity1: { correct: 0, total: 0 },
+                    activity2: { correct: 0, total: 10 },
+                    activity3: { correct: 0, total: 10 }
+                },
+                act: {},            // per-activity saved progress / review HTML
+                completedPosted: false,
+                result: null,
+                totalSteps: 0,
+                lastUpdated: null
+            };
+        }
+        function loadProgress() {
+            if (!BOOT_OK) return freshProgress();
+            try {
+                const raw = JSON.parse(localStorage.getItem(PROGRESS_KEY) || 'null');
+                if (raw && raw.v === 2) return Object.assign(freshProgress(), raw);
+            } catch (e) { console.warn('Saved progress could not be read; starting fresh.', e); }
+            return freshProgress();
+        }
+        const P = loadProgress();
+
+        // Legacy variable names used throughout the case renderers. They now point
+        // into the per-case progress object P, so everything saves automatically.
+        const emptyScore = () => ({ correct: 0, total: 0, answeredKeys: [] });
+        let caseScores = { anna: emptyScore(), tyler: emptyScore(), hannah: emptyScore() };
+        if (CASE) caseScores[CASE] = P.score;
+        let globalScore = P.score;
+        let caseMistakes = { anna: [], tyler: [], hannah: [] };
+        let caseUnscoredAnswers = { anna: [], tyler: [], hannah: [] };
+        if (CASE) { caseMistakes[CASE] = P.mistakes; caseUnscoredAnswers[CASE] = P.unscored; }
+        const SHEETS_URL = localStorage.getItem('ner_sheets_url') || 'https://script.google.com/macros/s/AKfycbwSEDpEg3n2EZKyKLzu_dK4yYZS3gkm-qJ5QOSfpGQoetVHzQAW34T1TXz7hLgJUzuK/exec';
+        // When the site is opened straight from the computer (file://) — e.g. to test a
+        // download — nothing is sent to the Google Sheet, so test runs don't pollute real data.
+        const SHEET_LOGGING_ENABLED = window.location.protocol !== 'file:';
+
+        // State Variables
+        let currentStep = 0;              // kept for compatibility; P.step is the source of truth
+        let currentChartStep = 0;
+        let currentSecondPatientStep = 0;
+        const inPatientChart = CASE === 'tyler';
+        const inSecondPatient = CASE === 'hannah';
+        const inAnnaPatient = false;
+        let mainTimerInterval = null;
+        let mainTimeElapsed = 0;
+        let correctCodesEntered = P.codes;
+        let enteredCodes = {};
+        let activityScores = P.activityScores;
+        let reviewMode = false;           // true while showing a page the student already completed
+        let onLeaveStep = null;           // optional hook run when the student clicks Next
+
+        // Case timers (seconds elapsed per case) — only the current case is used on this tab
+        let caseTimers = { anna: 0, tyler: 0, hannah: 0 };
+        let caseTimerDone = { anna: false, tyler: false, hannah: false };
+        if (CASE) { caseTimers[CASE] = P.time || 0; caseTimerDone[CASE] = !!P.timerDone; }
+        let activeCaseTimer = null;
+        let caseTimerInterval = null;
+
+        let currentQuestionIndex = 0;
+        let activity2CorrectCount = 0;
 
        
         // MAIN STEPS (Activities 1-3 + intro/conclusion)
@@ -789,7 +853,7 @@
                 type: 'conclusion',
                 title: 'You escaped!',
                 subtitle: '',
-                content: `<p class="text-lg text-gray-700">You helped Anna with her headaches and are now one step closer to escaping the clinic. You have two patients left to see. Let's go and meet Tyler Haley and learn more about his headaches. Click on Case 2 below.</p>`
+                content: `<p class="text-lg text-gray-700">You helped Anna with her headaches and are now one step closer to escaping the clinic. You have two patients left to see. Next, you'll meet Tyler Haley and learn more about his headaches. Return to the dashboard and start Case 2 — you will need the codes below to unlock it.</p>`
             }
 
                 ];
@@ -874,6 +938,24 @@
                 content: `
                     <p>Married to wife, Janice for 12 years. They live in a house they own in a downtown neighborhood. He works as a construction worker. Tyler mentions that he recently started noticing problems with his balance and has had to cut back on work due to these symptoms. He denies any financial stress at present but if he continues having to cut back on his work hours, he may struggle financially in the next 6 months.</p>
                     <p class="mt-2">Tyler tries to eat healthy but admits that his diet is not well balanced as he is not a big fan of vegetables. He drinks 4 liters of water daily at work and roughly 2 liters on his days off. He drinks 3 cups of coffee per day and has 2-3 beers after work to relax. He smokes 4-5 cigarettes on his workdays as he gets more breaks when he smokes. He smokes 1-2 cigarettes on his days off. He does not use any other substances. He does not exercise often but feels his work is labor intensive and counts as exercise.</p>
+                    <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="text-center ner-photo">
+                            <img src="Tyler and Janice.png" alt="Tyler and his wife Janice" onerror="this.closest('.ner-photo').remove()">
+                            <p class="text-sm text-gray-500 mt-2 italic">Tyler and his wife Janice at their home downtown.</p>
+                        </div>
+                        <div class="text-center ner-photo">
+                            <img src="Tyler work.png" alt="Tyler at work" onerror="this.closest('.ner-photo').remove()">
+                            <p class="text-sm text-gray-500 mt-2 italic">Tyler struggling with his balance on the construction site.</p>
+                        </div>
+                        <div class="text-center ner-photo">
+                            <img src="Tyler's lunch.png" alt="Tyler's lunch" onerror="this.closest('.ner-photo').remove()">
+                            <p class="text-sm text-gray-500 mt-2 italic">Tyler's usual lunch. He's not a big fan of vegetables.</p>
+                        </div>
+                        <div class="text-center ner-photo">
+                            <img src="Tyler after work.png" alt="Tyler after work" onerror="this.closest('.ner-photo').remove()">
+                            <p class="text-sm text-gray-500 mt-2 italic">Tyler's after-work beers and smoke break.</p>
+                        </div>
+                    </div>
                 `
             },
 
@@ -1083,9 +1165,13 @@
                 title: 'Congratulations!',
                 content: `
                     <div class="text-center">
-                        <p class="text-xl mb-4">You helped Tyler seek additional emergency care for his headaches. You have now cared for 2 patients, and are another step closer to escaping the clinic for the day. You have one patient left to see. Let's go and meet Hannah Howard and learn more about her headaches. Click on Case 3 below.</p>
-
-                        <button id="next-patient-button" class="mt-8 px-8 py-4 bg-blue-600 text-white rounded-lg font-semibold shadow-md hover:bg-blue-700 transition-colors transform hover:scale-105">Case 3 <i class="fas fa-arrow-right ml-1"></i></button>
+                        <p class="text-xl mb-4">You helped Tyler seek additional emergency care for his headaches. You have now cared for 2 patients, and are another step closer to escaping the clinic for the day. You have one patient left to see. Next, you'll meet Hannah Howard and learn more about her headaches. Return to the dashboard and start Case 3 — you will need the code below to unlock it.</p>
+                        <div class="mt-6 p-5 bg-yellow-400 border-4 border-yellow-600 rounded-2xl text-center shadow-xl">
+                            <p class="text-lg font-extrabold text-gray-900">🔑 Your code for Case 3</p>
+                            <p class="text-4xl font-black tracking-widest text-gray-900 font-mono my-2">${activityCodes.activity3}</p>
+                            <p class="text-gray-800 font-bold text-sm">✏️ Write this down — you'll need it to unlock Case 3.</p>
+                        </div>
+                        <button id="return-home-btn" data-keep class="mt-8 px-8 py-4 bg-blue-600 text-white rounded-lg font-semibold shadow-md hover:bg-blue-700 transition-colors transform hover:scale-105"><i class="fas fa-house mr-2"></i>Return to Dashboard</button>
                     </div>
                 `
             }
@@ -1184,6 +1270,24 @@
                 content: `
                     <p>Currently in a monogamous relationship with her partner Henry for 2 years. She lives in an apartment in downtown Kelowna. She is a marketing specialist, working a desk job with long hours spent at the computer. She describes her position as stressful when there are impending deadlines but loves her job and the creativity process. She denies any financial stress.</p>
                     <p class="mt-4">Hannah loves to cook in her time off, so she eats a variety of grass-fed meats and fresh foods. Hannah drinks 1-2 glasses of wine per night to relax. She consumes typically 2 cups of coffee per day, but sometimes can drink up to 4-5 cups. It is not well known in her friend circle, but Hannah does smoke roughly 10 cigarettes per day. She started when she was 17 years old. She does not use other substances. She enjoys going for a walk two times a week.</p>
+                    <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="text-center ner-photo">
+                            <img src="Hannah and Henry.png" alt="Hannah and her partner Henry" onerror="this.closest('.ner-photo').remove()">
+                            <p class="text-sm text-gray-500 mt-2 italic">Hannah and her partner Henry in their downtown Kelowna apartment.</p>
+                        </div>
+                        <div class="text-center ner-photo">
+                            <img src="Hannah work.png" alt="Hannah at work" onerror="this.closest('.ner-photo').remove()">
+                            <p class="text-sm text-gray-500 mt-2 italic">Hannah at her desk with a deadline coming up.</p>
+                        </div>
+                        <div class="text-center ner-photo">
+                            <img src="Hannah cooking.png" alt="Hannah cooking" onerror="this.closest('.ner-photo').remove()">
+                            <p class="text-sm text-gray-500 mt-2 italic">Hannah cooking with fresh foods on her day off.</p>
+                        </div>
+                        <div class="text-center ner-photo">
+                            <img src="Hannah walk.png" alt="Hannah on a walk" onerror="this.closest('.ner-photo').remove()">
+                            <p class="text-sm text-gray-500 mt-2 italic">Hannah on one of her twice-weekly walks.</p>
+                        </div>
+                    </div>
                 `
             },
 
@@ -1302,31 +1406,77 @@
                 content: `
                     <p class="mb-4">Congratulations on narrowing your differentials to include a working diagnosis of migraine headache with aura with differential diagnosis of medication overuse headache, tension-type headache, and cluster headache.</p>
                     <p class="mb-4">We have added another challenge for you to complete, to illustrate the clinical diagnostic reasoning and decision-making accounting for the prioritization of these differential diagnoses.</p>
-                    <p class="font-bold mb-4">You must select the best answer for each question.</p>
+                    <p class="font-bold mb-4">First, sort Hannah's pertinent positive findings: drag each finding into the headache type it supports. You have 2 attempts per card. Some findings fit more than one box; either correct box counts.</p>
                 `
             },
 
-{ type: 'hannah-quiz-1', title: 'Clinical Reasoning Challenge', content: `<div class="space-y-6"><div><p class="font-bold mb-2">Migraine with aura: Pertinent positive findings</p><div class="space-y-2"><label class="flex items-center"><input type="radio" name="quiz1" value="A" class="mr-2"> A - Pertinent positive findings include headaches that last roughly 10 to 72 hours, start gradually and progress over time, moderate to severe intensity, unilateral presentation, throbbing character, preceded by an aura, associated with nausea, phonophobia, photophobia, possibly triggered by chocolate, caffeine, stress, menstrual cycle, no red flag features, normal physical examination. Family hx of migraine headaches.</label><label class="flex items-center"><input type="radio" name="quiz1" value="B" class="mr-2"> B - Pertinent positive findings include female biological sex, headaches occurring on 15 or more days per months +/- a pre-existing headache disorder not yet diagnosed, smoking history, regular intake of Tylenol and Advil for ≥15 days per month for >3 months, nausea, no red flag features, normal physical exam.</label><label class="flex items-center"><input type="radio" name="quiz1" value="C" class="mr-2"> C - Pertinent positive findings include headaches that last roughly 10 to 72 hours, start gradually and progress over time, present following a stressful day at work.</label><label class="flex items-center"><input type="radio" name="quiz1" value="D" class="mr-2"> D - Pertinent positive findings include unilateral headache presentation and severe intensity.</label></div></div><p class="text-xs text-amber-700 font-semibold mt-3 mb-1">⚠️ You have 2 attempts for this question.</p><div id="quiz1-feedback" class="text-center font-semibold hidden"></div><button id="submit-quiz1" class="px-6 py-3 bg-green-500 text-white rounded-lg font-semibold shadow-md hover:bg-green-600 transition-colors">Submit Answer</button></div>` },
-
-{ type: 'hannah-quiz-2', title: 'Clinical Reasoning Challenge', content: `<div class="space-y-6"><div><p class="font-bold mb-2">Medication overuse headache: Pertinent positive findings</p><div class="space-y-2"><label class="flex items-center"><input type="radio" name="quiz2" value="A" class="mr-2"> A - Pertinent positive findings include unilateral headache presentation and severe intensity.</label><label class="flex items-center"><input type="radio" name="quiz2" value="B" class="mr-2"> B - Pertinent positive findings include female biological sex, headaches occurring on 15 or more days per months +/- a pre-existing headache disorder not yet diagnosed, smoking history, regular intake of Tylenol and Advil for ≥15 days per month for >3 months, nausea, no red flag features, normal physical exam.</label><label class="flex items-center"><input type="radio" name="quiz2" value="C" class="mr-2"> C - Pertinent positive findings include headaches that last roughly 10 to 72 hours, start gradually and progress over time, present following a stressful day at work.</label><label class="flex items-center"><input type="radio" name="quiz2" value="D" class="mr-2"> D - Pertinent positive findings include headaches that last roughly 10 to 72 hours, start gradually and progress over time, moderate to severe intensity, unilateral presentation, throbbing character, preceded by an aura.</label></div></div><p class="text-xs text-amber-700 font-semibold mt-3 mb-1">⚠️ You have 2 attempts for this question.</p><div id="quiz2-feedback" class="text-center font-semibold hidden"></div><button id="submit-quiz2" class="px-6 py-3 bg-green-500 text-white rounded-lg font-semibold shadow-md hover:bg-green-600 transition-colors">Submit Answer</button></div>` },
-
-{ type: 'hannah-quiz-3', title: 'Clinical Reasoning Challenge', content: `<div class="space-y-6"><div><p class="font-bold mb-2">Tension-type headaches: Pertinent positive findings</p><div class="space-y-2"><label class="flex items-center"><input type="radio" name="quiz3" value="A" class="mr-2"> A - Pertinent positive findings include headaches that last roughly 10 to 72 hours, start gradually and progress over time, moderate to severe intensity, unilateral presentation, throbbing character, preceded by an aura.</label><label class="flex items-center"><input type="radio" name="quiz3" value="B" class="mr-2"> B - Pertinent positive findings include headaches that last roughly 10 to 72 hours, start gradually and progress over time, present following a stressful day at work. Review of systems negative with no red flag features.</label><label class="flex items-center"><input type="radio" name="quiz3" value="C" class="mr-2"> C - Pertinent positive findings include unilateral headache presentation and severe intensity.</label><label class="flex items-center"><input type="radio" name="quiz3" value="D" class="mr-2"> D - Pertinent positive findings include female biological sex, headaches occurring on 15 or more days per months, smoking history, regular intake of Tylenol and Advil.</label></div></div><p class="text-xs text-amber-700 font-semibold mt-3 mb-1">⚠️ You have 2 attempts for this question.</p><div id="quiz3-feedback" class="text-center font-semibold hidden"></div><button id="submit-quiz3" class="px-6 py-3 bg-green-500 text-white rounded-lg font-semibold shadow-md hover:bg-green-600 transition-colors">Submit Answer</button></div>` },
-
-{ type: 'hannah-quiz-4', title: 'Clinical Reasoning Challenge', content: `<div class="space-y-6"><div><p class="font-bold mb-2">Cluster headache: Pertinent positive findings</p><div class="space-y-2"><label class="flex items-center"><input type="radio" name="quiz4" value="A" class="mr-2"> A - Pertinent positive findings include headaches that last roughly 10 to 72 hours, start gradually and progress over time, present following a stressful day at work.</label><label class="flex items-center"><input type="radio" name="quiz4" value="B" class="mr-2"> B - Pertinent positive findings include headaches that last roughly 10 to 72 hours, start gradually and progress over time, moderate to severe intensity, unilateral presentation, throbbing character, preceded by an aura.</label><label class="flex items-center"><input type="radio" name="quiz4" value="C" class="mr-2"> C - Pertinent positive findings include female biological sex, headaches occurring on 15 or more days per months, smoking history, regular intake of Tylenol and Advil.</label><label class="flex items-center"><input type="radio" name="quiz4" value="D" class="mr-2"> D - Pertinent positive findings include unilateral headache presentation and severe intensity.</label></div></div><p class="text-xs text-amber-700 font-semibold mt-3 mb-1">⚠️ You have 2 attempts for this question.</p><div id="quiz4-feedback" class="text-center font-semibold hidden"></div><button id="submit-quiz4" class="px-6 py-3 bg-green-500 text-white rounded-lg font-semibold shadow-md hover:bg-green-600 transition-colors">Submit Answer</button></div>` },
+// Pertinent POSITIVE findings — drag-and-drop (replaces the four MCQs).
+// Cards come from the original answer options, split into single findings with repeats
+// removed. A finding that fits more than one headache type lists every correct box.
+{
+                type: 'hannah-pertinent-positives',
+                title: 'Clinical Reasoning Challenge: Pertinent Positive Findings',
+                subtitle: 'Drag each finding from Hannah\'s case into the headache type it supports.',
+                findingKind: 'positive',
+                categories: [
+                    { id: 'migraine', label: 'Migraine with aura' },
+                    { id: 'moh',      label: 'Medication overuse headache' },
+                    { id: 'tension',  label: 'Tension-type headache' },
+                    { id: 'cluster',  label: 'Cluster headache' }
+                ],
+                cards: [
+                    { id: 'p-duration',  text: 'Headaches last roughly 10 to 72 hours', answers: ['migraine', 'tension'] },
+                    { id: 'p-gradual',   text: 'Start gradually and progress over time', answers: ['migraine', 'tension'] },
+                    { id: 'p-modsevere', text: 'Moderate to severe intensity', answers: ['migraine'] },
+                    { id: 'p-severe',    text: 'Severe intensity', answers: ['cluster'] },
+                    { id: 'p-unilat',    text: 'Unilateral presentation', answers: ['migraine', 'cluster'] },
+                    { id: 'p-throb',     text: 'Throbbing character', answers: ['migraine'] },
+                    { id: 'p-aura',      text: 'Preceded by an aura', answers: ['migraine'] },
+                    { id: 'p-nausea',    text: 'Nausea', answers: ['migraine', 'moh'] },
+                    { id: 'p-photo',     text: 'Phonophobia and photophobia', answers: ['migraine'] },
+                    { id: 'p-triggers',  text: 'Possibly triggered by chocolate, caffeine, stress or the menstrual cycle', answers: ['migraine'] },
+                    { id: 'p-famhx',     text: 'Family history of migraine headaches', answers: ['migraine'] },
+                    { id: 'p-female',    text: 'Female biological sex', answers: ['moh'] },
+                    { id: 'p-15days',    text: 'Headaches on 15 or more days per month, +/- a pre-existing headache disorder not yet diagnosed', answers: ['moh'] },
+                    { id: 'p-smoking',   text: 'Smoking history', answers: ['moh'] },
+                    { id: 'p-meds',      text: 'Regular Tylenol and Advil intake on ≥15 days per month for >3 months', answers: ['moh'] },
+                    { id: 'p-stress',    text: 'Present following a stressful day at work', answers: ['tension'] },
+                    { id: 'p-noredflag', text: 'No red flag features (review of systems negative) and a normal physical exam', answers: ['migraine', 'moh', 'tension'] }
+                ]
+            },
 
 {
                 type: 'hannah-negative-findings-intro',
                 title: 'Pertinent Negative Findings',
-                content: `<p class="mb-2">Select the most correct answers for the negative findings.</p>`
+                content: `<p class="mb-2">Next, sort Hannah's pertinent negative findings: the findings that argue <strong>against</strong> each headache type.</p>
+                          <p class="mb-2">Drag each finding into the headache type it argues against. You have <strong>2 attempts per card</strong>. Some findings fit more than one box; either correct box counts.</p>`
             },
 
-{ type: 'hannah-quiz-5', title: 'Clinical Reasoning Challenge', content: `<div class="space-y-6"><div><p class="font-bold mb-2">Migraine with aura: Pertinent Negative findings</p><div class="space-y-2"><label class="flex items-center"><input type="radio" name="quiz5" value="1" class="mr-2"> 1 - Pertinent negative findings include headaches lasting roughly 10 to 72 hours, starting gradually and progressing over time, characterized as a throbbing sensation. Review of systems negative for conjunctival injection, lacrimation, nasal congestion, rhinorrhea, ptosis, eyelid edema.</label><label class="flex items-center"><input type="radio" name="quiz5" value="2" class="mr-2"> 2 - Pertinent negative findings include headache characteristics and duration as this can be variable depending on medication type and impact on user.</label><label class="flex items-center"><input type="radio" name="quiz5" value="3" class="mr-2"> 3 - No pertinent negative findings</label><label class="flex items-center"><input type="radio" name="quiz5" value="4" class="mr-2"> 4 - Pertinent negative findings include headache characterized by unilateral, throbbing sensation that is moderate to severe intensity, presence of an aura, associated symptoms of nausea, phonophobia, photophobia.</label></div></div><p class="text-xs text-amber-700 font-semibold mt-3 mb-1">⚠️ You have 2 attempts for this question.</p><div id="quiz5-feedback" class="text-center font-semibold hidden"></div><button id="submit-quiz5" class="px-6 py-3 bg-green-500 text-white rounded-lg font-semibold shadow-md hover:bg-green-600 transition-colors">Submit Answer</button></div>` },
-
-{ type: 'hannah-quiz-6', title: 'Clinical Reasoning Challenge', content: `<div class="space-y-6"><div><p class="font-bold mb-2">Medication overuse headache: Pertinent Negative findings</p><div class="space-y-2"><label class="flex items-center"><input type="radio" name="quiz6" value="1" class="mr-2"> 1 - No pertinent negative findings</label><label class="flex items-center"><input type="radio" name="quiz6" value="2" class="mr-2"> 2 - Pertinent negative findings include headaches lasting roughly 10 to 72 hours, starting gradually and progressing over time, characterized as a throbbing sensation. Review of systems negative for conjunctival injection, lacrimation, nasal congestion, rhinorrhea, ptosis, eyelid edema.</label><label class="flex items-center"><input type="radio" name="quiz6" value="3" class="mr-2"> 3 - Pertinent negative findings include headache characterized by unilateral, throbbing sensation that is moderate to severe intensity, presence of an aura, associated symptoms of nausea, phonophobia, photophobia.</label><label class="flex items-center"><input type="radio" name="quiz6" value="4" class="mr-2"> 4 - Pertinent negative findings include headache characteristics and duration as this can be variable depending on medication type and impact on user.</label></div></div><p class="text-xs text-amber-700 font-semibold mt-3 mb-1">⚠️ You have 2 attempts for this question.</p><div id="quiz6-feedback" class="text-center font-semibold hidden"></div><button id="submit-quiz6" class="px-6 py-3 bg-green-500 text-white rounded-lg font-semibold shadow-md hover:bg-green-600 transition-colors">Submit Answer</button></div>` },
-
-{ type: 'hannah-quiz-7', title: 'Clinical Reasoning Challenge', content: `<div class="space-y-6"><div><p class="font-bold mb-2">Tension-type headache: Pertinent Negative findings</p><div class="space-y-2"><label class="flex items-center"><input type="radio" name="quiz7" value="1" class="mr-2"> 1 - Pertinent negative findings include headache characteristics and duration as this can be variable depending on medication type and impact on user.</label><label class="flex items-center"><input type="radio" name="quiz7" value="2" class="mr-2"> 2 - Pertinent negative findings include headache characterized by unilateral, throbbing sensation that is moderate to severe intensity, presence of an aura, associated symptoms of nausea, phonophobia, photophobia.</label><label class="flex items-center"><input type="radio" name="quiz7" value="3" class="mr-2"> 3 - Pertinent negative findings include headaches lasting roughly 10 to 72 hours, starting gradually and progressing over time, characterized as a throbbing sensation. Review of systems negative for conjunctival injection, lacrimation, nasal congestion, rhinorrhea, ptosis, eyelid edema.</label><label class="flex items-center"><input type="radio" name="quiz7" value="4" class="mr-2"> 4 - No pertinent negative findings</label></div></div><p class="text-xs text-amber-700 font-semibold mt-3 mb-1">⚠️ You have 2 attempts for this question.</p><div id="quiz7-feedback" class="text-center font-semibold hidden"></div><button id="submit-quiz7" class="px-6 py-3 bg-green-500 text-white rounded-lg font-semibold shadow-md hover:bg-green-600 transition-colors">Submit Answer</button></div>` },
-
-{ type: 'hannah-quiz-8', title: 'Clinical Reasoning Challenge', content: `<div class="space-y-6"><div><p class="font-bold mb-2">Cluster headache: Pertinent Negative findings</p><div class="space-y-2"><label class="flex items-center"><input type="radio" name="quiz8" value="1" class="mr-2"> 1 - Pertinent negative findings include headache characteristics and duration as this can be variable depending on medication type and impact on user.</label><label class="flex items-center"><input type="radio" name="quiz8" value="2" class="mr-2"> 2 - No pertinent negative findings</label><label class="flex items-center"><input type="radio" name="quiz8" value="3" class="mr-2"> 3 - Pertinent negative findings include headache characterized by unilateral, throbbing sensation that is moderate to severe intensity, presence of an aura, associated symptoms of nausea, phonophobia, photophobia.</label><label class="flex items-center"><input type="radio" name="quiz8" value="4" class="mr-2"> 4 - Pertinent negative findings include headaches lasting roughly 10 to 72 hours, starting gradually and progressing over time, characterized as a throbbing sensation. Review of systems negative for conjunctival injection, lacrimation, nasal congestion, rhinorrhea, ptosis, eyelid edema.</label></div></div><p class="text-xs text-amber-700 font-semibold mt-3 mb-1">⚠️ You have 2 attempts for this question.</p><div id="quiz8-feedback" class="text-center font-semibold hidden"></div><button id="submit-quiz8" class="px-6 py-3 bg-green-500 text-white rounded-lg font-semibold shadow-md hover:bg-green-600 transition-colors">Submit Answer</button></div>` },
+// Pertinent NEGATIVE findings — drag-and-drop (replaces the four MCQs).
+{
+                type: 'hannah-pertinent-negatives',
+                title: 'Clinical Reasoning Challenge: Pertinent Negative Findings',
+                subtitle: 'Drag each finding into the headache type it argues against.',
+                findingKind: 'negative',
+                categories: [
+                    { id: 'migraine', label: 'Migraine with aura' },
+                    { id: 'moh',      label: 'Medication overuse headache' },
+                    { id: 'tension',  label: 'Tension-type headache' },
+                    { id: 'cluster',  label: 'Cluster headache' }
+                ],
+                cards: [
+                    { id: 'n-none',      text: 'No pertinent negative findings', answers: ['migraine'] },
+                    { id: 'n-variable',  text: 'Headache characteristics and duration are variable depending on medication type and impact on the user', answers: ['moh'] },
+                    { id: 'n-unilat',    text: 'Unilateral presentation', answers: ['tension'] },
+                    { id: 'n-throb',     text: 'Throbbing sensation', answers: ['tension', 'cluster'] },
+                    { id: 'n-modsevere', text: 'Moderate to severe intensity', answers: ['tension'] },
+                    { id: 'n-aura',      text: 'Presence of an aura', answers: ['tension'] },
+                    { id: 'n-assoc',     text: 'Associated nausea, phonophobia and photophobia', answers: ['tension'] },
+                    { id: 'n-duration',  text: 'Headaches lasting roughly 10 to 72 hours', answers: ['cluster'] },
+                    { id: 'n-gradual',   text: 'Starting gradually and progressing over time', answers: ['cluster'] },
+                    { id: 'n-ros',       text: 'Review of systems negative for conjunctival injection, lacrimation, nasal congestion, rhinorrhea, ptosis and eyelid edema', answers: ['cluster'] }
+                ]
+            },
 
 {
                 type: 'hannah-management-overview',
@@ -1652,18 +1802,15 @@
             },
             {
                 type: 'hannah-final-summary',
-                title: 'All Cases Complete!',
+                title: 'Case 3 Complete!',
                 content: `
                     <div class="text-center" id="final-summary-content">
-                        <div class="mt-2 p-5 bg-blue-50 border border-blue-200 rounded-xl text-left">
-                            <h3 class="text-lg font-bold text-blue-800 mb-3">&#127942; You have completed all three patient cases!</h3>
-                            <p class="text-blue-700 text-sm">You've worked through Anna Jacobs, Tyler Haley, and Hannah Howard. Don't forget to download your certificate of completion and upload it to your Moodle course shell.</p>
-                        </div>
+                        <div id="final-summary-intro" class="mt-2 p-5 bg-blue-50 border border-blue-200 rounded-xl text-left"></div>
                         <div id="final-score-box" class="mt-6 p-6 rounded-xl border-2"></div>
 
-                        <p class="mt-6 text-lg font-bold text-gray-800">Congratulations on completing the TRU MN-NP Program Escape Room!</p>
-                        <button id="return-home-btn" class="mt-6 px-8 py-4 bg-blue-600 text-white rounded-lg font-semibold shadow-md hover:bg-blue-700 transition-colors transform hover:scale-105">
-                            <i class="fas fa-house mr-2"></i>Return to Home
+                        <p id="final-summary-closing" class="mt-6 text-lg font-bold text-gray-800"></p>
+                        <button id="return-home-btn" data-keep class="mt-6 px-8 py-4 bg-blue-600 text-white rounded-lg font-semibold shadow-md hover:bg-blue-700 transition-colors transform hover:scale-105">
+                            <i class="fas fa-house mr-2"></i>Return to Dashboard
                         </button>
                     </div>
                 `
@@ -1830,15 +1977,9 @@
             if (scoreBadge) scoreBadge.textContent = `⭐ Score: ${globalScore.correct} / ${globalScore.total}`;
         }
 
-        function startMainTimer() {
-            if (!mainTimerInterval) {
-                mainTimerInterval = setInterval(() => {
-                    mainTimeElapsed++;
-                    timerDisplay.textContent = `Time Elapsed: ${formatTime(mainTimeElapsed)}`;
-                    saveState();
-                }, 1000);
-            }
-        }
+        // The overall "Time Elapsed" timer was replaced by the per-case timer shown in the
+        // bottom strip (each case now runs on its own). Kept as a no-op for existing callers.
+        function startMainTimer() {}
 
         function updateScoreboard() {
             return `
@@ -1878,10 +2019,12 @@
             setActivityMode(true);
             backButton.classList.add('hidden');
             nextButton.classList.add('hidden');
-            const hcLog = [];
+            // Saved progress: answered scenarios survive a refresh / sleep.
+            const hcSaved = P.act[step.type] = P.act[step.type] || { log: [] };
+            const hcLog = hcSaved.log;
+            window.__hcQIndex = hcLog.length;
 
             function renderQuestion() {
-                if (currentSecondPatientStep === undefined) return; // safety guard, never triggers
                 const qIndex = window.__hcQIndex || 0;
                 if (qIndex >= step.questions.length) {
                     showSummary();
@@ -1930,7 +2073,9 @@
                             fb.innerHTML = '<span class="text-red-700">❌ Incorrect.</span> ' + q.incorrectMsg + '<br><br><span class="text-green-700 font-bold">✅ Correct answer: ' + (q.answer === 'primary' ? 'Primary-type headache' : 'Secondary-type headache') + '</span>';
                             fb.className = 'mt-4 p-4 bg-red-50 rounded-lg font-semibold text-red-700';
                             hcLog.push({ scenario: q.scenario, wasCorrect: false });
+                            awardPoint(`hannah-hc-${qIndex}`, false, { question: q.scenario, given: btn.dataset.option, correct: q.answer });
                         }
+                        saveState();
                         fb.classList.remove('hidden');
                         document.getElementById('hc-next-btn').classList.remove('hidden');
                     };
@@ -1942,7 +2087,6 @@
             }
 
             function showSummary() {
-                window.__hcQIndex = 0; // reset for any future replay
                 saveStudentCaseData('hannah', { headacheClassificationLog: hcLog, headacheClassificationScore: { correct: hcLog.filter(l=>l.wasCorrect).length, total: step.questions.length } });
                 contentArea.innerHTML = `
                     <section class="flex flex-col gap-4">
@@ -1951,11 +2095,196 @@
                     </section>
                 `;
                 setActivityMode(false);
+                finishActivity(step.type);
                 nextButton.classList.remove('hidden');
             }
 
-            window.__hcQIndex = 0;
             renderQuestion();
+        }
+
+        // =====================================================================
+        // FINDINGS SORT — drag-and-drop for Hannah's pertinent positive / negative findings.
+        // Drag a card onto a box (mouse), or tap a card then tap a box (touch / keyboard).
+        // 2 attempts per card, 1 point per card, progress saved after every placement.
+        // =====================================================================
+        function renderFindingsSort(step) {
+            setActivityMode(true);
+            nextButton.classList.add('hidden');
+            const st = P.act[step.type] = P.act[step.type] || {};
+            if (!Array.isArray(st.order)) {
+                const ids = step.cards.map(c => c.id);
+                for (let i = ids.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [ids[i], ids[j]] = [ids[j], ids[i]]; }
+                st.order = ids;
+            }
+            st.placed = st.placed || {};
+            st.tries = st.tries || {};
+            saveState();
+
+            const cardById = Object.fromEntries(step.cards.map(c => [c.id, c]));
+            const catLabel = id => (step.categories.find(c => c.id === id) || {}).label || id;
+            const kindLabel = step.findingKind === 'positive' ? 'Pertinent positive' : 'Pertinent negative';
+            const verb = step.findingKind === 'positive' ? 'supports' : 'argues against';
+            const pointKey = id => `hannah-${step.findingKind}-${id}`;
+            const total = step.cards.length;
+            let selectedId = null;
+            let dragId = null;
+
+            if (Object.keys(st.placed).length >= total) { showReview(); return; }
+
+            contentArea.innerHTML = `
+                <section class="flex flex-col gap-4">
+                    <h2 class="text-2xl font-bold text-white">${step.title} — <span class="text-yellow-300 text-lg">2 tries per card</span></h2>
+                    <p class="text-blue-200">${step.subtitle}</p>
+                    <p class="text-blue-300 text-sm">Drag a card onto a box, or tap a card and then tap a box. If a finding fits more than one headache type, either correct box counts.</p>
+                    <div id="fs-pool" class="flex flex-wrap gap-2 p-4 bg-slate-700 rounded-lg min-h-[80px] mt-2"></div>
+                    <div id="fs-msg" class="text-sm font-semibold min-h-[1.25rem]" aria-live="polite"></div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        ${step.categories.map(cat => `
+                            <div class="fs-box drop-target p-4 rounded-xl bg-slate-800 border-2 border-slate-600" data-cat="${cat.id}" role="button" tabindex="0" aria-label="${cat.label}">
+                                <h3 class="text-lg font-bold text-center mb-2 text-blue-200">${cat.label}</h3>
+                                <div class="cards-area flex flex-wrap gap-2 min-h-[40px]"></div>
+                            </div>`).join('')}
+                    </div>
+                    <div id="fs-progress" class="text-blue-300 text-sm"></div>
+                </section>
+            `;
+            const pool = document.getElementById('fs-pool');
+            const msg = document.getElementById('fs-msg');
+
+            function cardEl(card) {
+                // A div (not a <button>) so Firefox allows dragging it
+                const el = document.createElement('div');
+                el.setAttribute('role', 'button');
+                el.tabIndex = 0;
+                el.id = `fs-${card.id}`;
+                el.dataset.id = card.id;
+                el.className = 'fs-card drag-item cursor-grab relative bg-blue-500 text-white px-3 py-2 rounded-lg font-medium text-sm text-left shadow-md max-w-full';
+                el.textContent = card.text;
+                const badge = document.createElement('span');
+                badge.className = 'tries-badge absolute -top-2 -right-2 bg-yellow-400 text-gray-900 text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center';
+                badge.textContent = String(2 - (st.tries[card.id] || 0));
+                el.appendChild(badge);
+                return el;
+            }
+
+            function settle(el, placement) {
+                el.draggable = false;
+                el.tabIndex = -1;
+                el.setAttribute('aria-disabled', 'true');
+                el.classList.remove('bg-blue-500', 'ring-4', 'ring-yellow-300');
+                el.classList.add(placement.ok ? 'bg-green-600' : 'bg-slate-500', 'cursor-default');
+                if (!placement.ok) el.classList.add('opacity-70');
+                const badge = el.querySelector('.tries-badge');
+                if (badge) { if (placement.ok) badge.remove(); else badge.textContent = '✗'; }
+                document.querySelector(`.fs-box[data-cat="${placement.cat}"] .cards-area`).appendChild(el);
+            }
+
+            function updateProgress() {
+                const done = Object.keys(st.placed).length;
+                const right = Object.values(st.placed).filter(p => p.ok).length;
+                document.getElementById('fs-progress').textContent = `Placed: ${done} / ${total} · Correct: ${right}`;
+            }
+
+            function select(id) {
+                if (id && st.placed[id]) return;
+                document.querySelectorAll('.fs-card').forEach(c => c.classList.remove('ring-4', 'ring-yellow-300'));
+                selectedId = id;
+                if (id) {
+                    document.getElementById(`fs-${id}`).classList.add('ring-4', 'ring-yellow-300');
+                    msg.className = 'text-sm font-semibold min-h-[1.25rem] text-yellow-300';
+                    msg.textContent = 'Now tap the headache type this finding ' + verb + '.';
+                }
+            }
+
+            function attempt(id, catId) {
+                const card = cardById[id];
+                if (!card || st.placed[id]) return;
+                const el = document.getElementById(`fs-${id}`);
+                select(null);
+                if (card.answers.includes(catId)) {
+                    st.placed[id] = { cat: catId, ok: true };
+                    settle(el, st.placed[id]);
+                    awardPoint(pointKey(id), true);
+                    msg.className = 'text-sm font-semibold min-h-[1.25rem] text-green-400';
+                    msg.textContent = '✅ Correct!' + (card.answers.length > 1 ? ' This finding also fits: ' + card.answers.filter(a => a !== catId).map(catLabel).join(', ') + '.' : '');
+                } else {
+                    st.tries[id] = (st.tries[id] || 0) + 1;
+                    if (st.tries[id] >= 2) {
+                        st.placed[id] = { cat: card.answers[0], ok: false, given: catId };
+                        settle(el, st.placed[id]);
+                        awardPoint(pointKey(id), false, { question: `${kindLabel}: ${card.text}`, given: catLabel(catId), correct: card.answers.map(catLabel).join(' or ') });
+                        msg.className = 'text-sm font-semibold min-h-[1.25rem] text-red-400';
+                        msg.textContent = '❌ Out of attempts. It belongs in: ' + card.answers.map(catLabel).join(' or ') + '.';
+                    } else {
+                        const badge = el.querySelector('.tries-badge');
+                        if (badge) badge.textContent = '1';
+                        el.classList.add('border-2', 'border-red-500');
+                        setTimeout(() => el.classList.remove('border-2', 'border-red-500'), 800);
+                        msg.className = 'text-sm font-semibold min-h-[1.25rem] text-red-400';
+                        msg.textContent = 'Not quite. You have 1 attempt left for this card.';
+                    }
+                }
+                saveState();
+                updateProgress();
+                if (Object.keys(st.placed).length >= total) setTimeout(showReview, 700);
+            }
+
+            // Build cards: unplaced ones in the pool, placed ones in their boxes
+            st.order.forEach(id => {
+                const card = cardById[id];
+                if (!card) return;
+                const el = cardEl(card);
+                if (st.placed[id]) { pool.appendChild(el); settle(el, st.placed[id]); return; }
+                el.draggable = true;
+                el.addEventListener('dragstart', e => { dragId = id; e.dataTransfer.setData('text/plain', id); el.classList.add('is-dragging'); });
+                el.addEventListener('dragend', () => { el.classList.remove('is-dragging'); });
+                el.addEventListener('click', () => select(selectedId === id ? null : id));
+                el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(selectedId === id ? null : id); } });
+                pool.appendChild(el);
+            });
+
+            document.querySelectorAll('.fs-box').forEach(box => {
+                box.addEventListener('dragover', e => e.preventDefault());
+                box.addEventListener('dragenter', e => { e.preventDefault(); box.classList.add('hovered'); });
+                box.addEventListener('dragleave', () => box.classList.remove('hovered'));
+                box.addEventListener('drop', e => {
+                    e.preventDefault(); box.classList.remove('hovered');
+                    const id = e.dataTransfer.getData('text/plain') || dragId;
+                    dragId = null;
+                    if (id) attempt(id, box.dataset.cat);
+                });
+                const tapDrop = () => { if (selectedId) attempt(selectedId, box.dataset.cat); };
+                box.addEventListener('click', e => { if (!e.target.closest('.fs-card')) tapDrop(); });
+                box.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tapDrop(); } });
+            });
+            updateProgress();
+
+            function showReview() {
+                setActivityMode(false);
+                const right = step.cards.filter(c => st.placed[c.id] && st.placed[c.id].ok).length;
+                const groups = step.categories.map(cat => {
+                    const rows = step.cards.filter(c => st.placed[c.id] && st.placed[c.id].cat === cat.id).map(c => {
+                        const p = st.placed[c.id];
+                        const also = c.answers.length > 1 ? `<p class="text-xs text-gray-600 mt-1 italic">Also fits: ${c.answers.filter(a => a !== p.cat).map(catLabel).join(', ')}</p>` : '';
+                        return `<div class="review-card ${p.ok ? 'correct-review' : 'incorrect-review'} p-3 rounded-lg mb-2">
+                            <p class="font-semibold text-gray-800 text-sm">${p.ok ? '✅' : '❌'} ${c.text}</p>
+                            ${p.ok ? '' : `<p class="text-xs text-red-700 mt-1">You placed it in: <strong>${catLabel(p.given)}</strong> — correct: <strong>${c.answers.map(catLabel).join(' or ')}</strong></p>`}
+                            ${also}
+                        </div>`;
+                    }).join('');
+                    return `<div class="mb-4"><h4 class="font-bold text-gray-800 mb-2">${cat.label}</h4>${rows || '<p class="text-sm text-gray-500 italic">No findings.</p>'}</div>`;
+                }).join('');
+                contentArea.innerHTML = `
+                    <section class="flex flex-col gap-4">
+                        <h2 class="text-2xl font-bold text-gray-800">${kindLabel} Findings Complete! 🎉</h2>
+                        <p class="text-gray-600">You placed <strong>${right} / ${total}</strong> findings correctly.</p>
+                        <h3 class="text-xl font-bold text-gray-800 mt-2">Review</h3>
+                        <div>${groups}</div>
+                    </section>
+                `;
+                finishActivity(step.type);
+                nextButton.classList.remove('hidden');
+            }
         }
 
                 function renderIntroStep(step) {
@@ -1970,9 +2299,7 @@
             backButton.classList.add('hidden');
             nextButton.classList.add('hidden');
             document.getElementById('start-button').onclick = () => {
-                currentStep = 1;
-                startMainTimer();
-                renderStep();
+                goToStep(1);
             };
         }
 
@@ -2085,7 +2412,7 @@
                     saveState();
 
                     // All placed — show completion + review
-                    if (placedCount === shuffled.length && !correctCodesEntered.activity1) {
+                    if (placedCount === shuffled.length) {
                         correctCodesEntered.activity1 = true; enteredCodes.activity1 = activityCodes.activity1;
                         updateCodeInputStates(); saveState();
                         // Show review
@@ -2133,14 +2460,18 @@
                         <div>${reviewRows}</div>
                     </section>
                 `;
-// code shown inline — no modal needed
+                finishActivity(step.type);
                 nextButton.classList.remove('hidden');
             }
         }
 
         function renderActivity2(step) {
             setActivityMode(true);
-            const act2Log = []; // track all answers for review
+            // Saved progress: answered questions survive a refresh / sleep.
+            const act2Saved = P.act[step.type] = P.act[step.type] || { log: [] };
+            const act2Log = act2Saved.log; // track all answers for review
+            currentQuestionIndex = act2Log.length;
+            activity2CorrectCount = act2Log.filter(l => l.wasCorrect).length;
 
             contentArea.innerHTML = `
                 <section class="flex flex-col gap-4">
@@ -2275,11 +2606,8 @@
                         <div>${rows}</div>
                     </section>
                 `;
-                if (!correctCodesEntered.activity2) {
-                    correctCodesEntered.activity2 = true; enteredCodes.activity2 = activityCodes.activity2;
-                    updateCodeInputStates(); saveState();
-                }
-// code shown inline — no modal needed
+                correctCodesEntered.activity2 = true; enteredCodes.activity2 = activityCodes.activity2;
+                finishActivity(step.type);
                 nextButton.classList.remove('hidden');
             }
 
@@ -2290,10 +2618,16 @@
             setActivityMode(true);
             backButton.classList.add('hidden');
             nextButton.classList.add('hidden');
-            let part1Score = { correct: 0, total: step.parts.part1.items.length };
-            let part2Score = { correct: 0, total: step.parts.part2.questions.length };
-            let part3Score = { correct: 0, total: step.parts.part3.questions.length };
-            const part1Log = [], part2Log = [], part3Log = [];
+            // Saved progress: finished parts / answered questions survive a refresh / sleep.
+            // Part 1 (drag & drop) restarts if interrupted part-way; Parts 2 and 3 resume
+            // at the next unanswered question.
+            const a3 = P.act[step.type] = P.act[step.type] || { part: 1, part1Log: [], part2Log: [], part3Log: [] };
+            if (a3.part === 1) a3.part1Log.length = 0;
+            const part1Log = a3.part1Log, part2Log = a3.part2Log, part3Log = a3.part3Log;
+            const countCorrect = log => log.filter(l => l.wasCorrect).length;
+            let part1Score = { correct: countCorrect(part1Log), total: step.parts.part1.items.length };
+            let part2Score = { correct: countCorrect(part2Log), total: step.parts.part2.questions.length };
+            let part3Score = { correct: countCorrect(part3Log), total: step.parts.part3.questions.length };
 
             function renderPart1() {
                 const shuffledItems = [...step.parts.part1.items].sort(() => Math.random() - 0.5);
@@ -2372,14 +2706,18 @@
                             }
                         }
                         document.getElementById('p1-score').textContent = `Placed: ${placedCount} / ${shuffledItems.length}`;
-                        if (placedCount === shuffledItems.length) document.getElementById('next-part-1').classList.remove('hidden');
+                        if (placedCount === shuffledItems.length) {
+                            a3.part = 2; saveState();
+                            document.getElementById('next-part-1').classList.remove('hidden');
+                        }
                     });
                 });
                 document.getElementById('next-part-1').onclick = () => renderPart2();
             }
 
             function renderPart2() {
-                let currentQuestion = 0;
+                a3.part = 2;
+                let currentQuestion = part2Log.length;
                 function renderQuestion() {
                     if (currentQuestion >= step.parts.part2.questions.length) { renderPart3(); return; }
                     const question = step.parts.part2.questions[currentQuestion];
@@ -2433,6 +2771,7 @@
                             hintDiv.classList.add('hidden');
                             part2Log.push({ question: question.question, wasCorrect: false, correct: question.answer, given: userAnswer });
                         }
+                        saveState();
                         nextBtn.classList.remove('hidden');
                         nextBtn.onclick = () => { currentQuestion++; renderQuestion(); };
                         answerInput.focus();
@@ -2445,6 +2784,7 @@
                         hintDiv.classList.add('hidden');
                         lockQuestion();
                         part2Log.push({ question: question.question, wasCorrect: false, correct: question.answer, given: '(skipped)' });
+                        saveState();
                         nextBtn.classList.remove('hidden');
                         nextBtn.onclick = () => { currentQuestion++; renderQuestion(); };
                     };
@@ -2457,7 +2797,8 @@
             }
 
             function renderPart3() {
-                let currentQuestion = 0;
+                a3.part = 3; saveState();
+                let currentQuestion = part3Log.length;
                 function renderQuestion() {
                     if (currentQuestion >= step.parts.part3.questions.length) {
                         showActivity3Review();
@@ -2496,6 +2837,7 @@
                             tfFeedback.innerHTML = `<span class="text-red-400">❌ Incorrect.</span><br><span class="text-slate-300 text-sm">${question.explanation}</span>`;
                         }
                         part3Log.push({ question: question.question, wasCorrect: isCorrect, correct: question.answer ? 'True' : 'False', given: userAnswer ? 'True' : 'False', explanation: question.explanation });
+                        saveState();
                         document.getElementById('p3-score').textContent = part3Score.correct;
                         nextTf.textContent = currentQuestion + 1 < step.parts.part3.questions.length ? 'Next Question →' : 'See Results →';
                         nextTf.classList.remove('hidden');
@@ -2560,6 +2902,11 @@
                             <p class="text-2xl font-extrabold text-gray-900 mb-1">🎉 SNNOOP10 ACTIVITY COMPLETE!</p>
                             <p class="text-gray-800 font-bold text-base mt-2">Great work completing the SNNOOP10 challenge in Tyler's case!</p>
                         </div>
+                        <div class="p-6 bg-yellow-400 border-4 border-yellow-600 rounded-2xl mb-4 text-center shadow-xl">
+                            <p class="text-2xl font-extrabold text-gray-900 mb-1">🔑 ACTIVITY 3 CODE</p>
+                            <p class="text-5xl font-black tracking-widest text-gray-900 font-mono my-3">${activityCodes.activity3}</p>
+                            <p class="text-gray-800 font-bold text-base">✏️ WRITE THIS DOWN NOW — you will need it to unlock Case 3!</p>
+                        </div>
                         <div class="grid grid-cols-3 gap-3 text-center text-sm mb-2">
                             <div class="p-2 bg-slate-100 rounded"><strong>Part 1</strong><br>${part1Score.correct}/${part1Score.total}</div>
                             <div class="p-2 bg-slate-100 rounded"><strong>Part 2</strong><br>${part2Score.correct}/${part2Score.total}</div>
@@ -2572,15 +2919,14 @@
                 `;
                 activityScores.activity3.correct = totalCorrect;
                 activityScores.activity3.total = totalQ;
-                if (!correctCodesEntered.activity3) {
-                    correctCodesEntered.activity3 = true; enteredCodes.activity3 = activityCodes.activity3;
-                    updateCodeInputStates(); saveState();
-                }
-// code shown inline — no modal needed
+                correctCodesEntered.activity3 = true; enteredCodes.activity3 = activityCodes.activity3;
+                finishActivity(step.type);
                 nextButton.classList.remove('hidden');
             }
 
-            renderPart1();
+            if (a3.part === 3) renderPart3();
+            else if (a3.part === 2) renderPart2();
+            else renderPart1();
         }
 
 
@@ -2669,9 +3015,11 @@
             // On anna-final, stop any running timer and mark complete
             let annaScore = 0, annaTotal = 0, annaPct = 0, annaPassed = false;
             if (step.type === 'anna-final') {
-                stopCaseTimer();
-                annaScore = activityScores.activity1.correct + activityScores.activity2.correct + activityScores.activity3.correct;
-                annaTotal = activityScores.activity1.total + activityScores.activity2.total + activityScores.activity3.total;
+                finishCaseTimer('anna');
+                // Case 1 score = every scored question in Anna's case (decision points,
+                // management questions, Activity 1 cards and Activity 2 MCQs).
+                annaScore = caseScores.anna.correct;
+                annaTotal = caseScores.anna.total;
                 annaPct = annaTotal > 0 ? Math.round((annaScore / annaTotal) * 100) : 0;
                 annaPassed = annaPct >= 70;
                 markCaseCompleted('anna', {
@@ -2703,7 +3051,7 @@
                         </div>
                         <div class="mt-4 text-center">
                             <p class="text-white/80 text-sm mb-3">${annaPassed ? 'Congratulations! You scored 70% or above. Download your Certificate of Completion below.' : 'You scored below 70%. Download your Certificate of Participation below.'}</p>
-                            <button onclick="generateCertificateCase1()" class="px-6 py-3 ${annaPassed ? 'bg-green-400 hover:bg-green-300' : 'bg-amber-400 hover:bg-amber-300'} text-white font-bold rounded-lg shadow-md transition-colors text-sm">
+                            <button onclick="generateCertificateCase1()" data-keep class="px-6 py-3 ${annaPassed ? 'bg-green-400 hover:bg-green-300' : 'bg-amber-400 hover:bg-amber-300'} text-white font-bold rounded-lg shadow-md transition-colors text-sm">
                                 🎓 Download ${annaPassed ? 'Certificate of Completion' : 'Certificate of Participation'}
                             </button>
                         </div>
@@ -2925,78 +3273,97 @@
             }
         }
 
+        // End of Case 1: recap the two codes and send the student back to the dashboard.
         function renderConclusionStep(step) {
-            backButton.classList.add('hidden'); nextButton.classList.add('hidden');
             contentArea.innerHTML = `
                 <section class="flex flex-col gap-6">
                     <div class="text-center">
                         <h2 class="text-4xl font-bold text-gray-800">${step.title}</h2>
                         <div class="mt-4 text-left p-6 bg-yellow-50 rounded-lg shadow-inner">${step.content}</div>
                     </div>
+                    <div class="p-6 bg-slate-800 rounded-2xl text-center">
+                        <h3 class="text-white text-xl font-bold mb-2">🔑 Your codes for Case 2</h3>
+                        <p class="text-slate-300 text-sm mb-5">Write these down — Case 2 will ask for both before it opens.</p>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div class="p-4 bg-yellow-400 rounded-xl">
+                                <p class="text-xs font-bold uppercase text-gray-800">Activity 1 Code</p>
+                                <p class="text-3xl font-black tracking-widest text-gray-900 font-mono mt-1">${activityCodes.activity1}</p>
+                            </div>
+                            <div class="p-4 bg-yellow-400 rounded-xl">
+                                <p class="text-xs font-bold uppercase text-gray-800">Activity 2 Code</p>
+                                <p class="text-3xl font-black tracking-widest text-gray-900 font-mono mt-1">${activityCodes.activity2}</p>
+                            </div>
+                        </div>
+                        <button id="return-home-btn" data-keep class="w-full mt-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-lg transition-colors">
+                            <i class="fas fa-house mr-2"></i>Return to Dashboard
+                        </button>
+                    </div>
+                </section>
+            `;
+        }
+
+        // First screen of Case 2 / Case 3: enter the code(s) earned in the previous case.
+        function renderCaseGate() {
+            const gate = CASE_GATES[CASE];
+            setActivityMode(false);
+            backButton.classList.add('hidden'); nextButton.classList.add('hidden');
+            const plural = gate.codes.length > 1;
+            contentArea.innerHTML = `
+                <section class="flex flex-col gap-6">
                     <div class="p-6 bg-slate-800 rounded-2xl">
-                        <h3 class="text-white text-xl font-bold text-center mb-2">🔐 Unlock Case 2</h3>
-                        <p class="text-slate-300 text-sm text-center mb-5">Enter the two codes you wrote down from Activities 1 and 2 to proceed to Tyler Haley's case.</p>
+                        <h3 class="text-white text-2xl font-bold text-center mb-2">🔐 Unlock ${CASE_INFO[CASE].title.replace('Headache ', '')}</h3>
+                        <p class="text-slate-300 text-sm text-center mb-5">Enter the ${plural ? 'codes' : 'code'} you wrote down at the end of ${gate.from} to begin this case.</p>
                         <div class="flex flex-col gap-3">
+                            ${gate.codes.map((c, i) => `
                             <div>
-                                <label class="text-slate-400 text-xs uppercase tracking-wide font-bold block mb-1">Activity 1 Code</label>
-                                <input id="unlock-code-1" type="text" maxlength="12"
-                                    class="w-full px-4 py-3 bg-slate-700 border-2 border-slate-500 text-white font-mono text-lg uppercase rounded-xl focus:outline-none focus:border-blue-400 tracking-widest"
+                                <label for="gate-code-${i}" class="text-slate-400 text-xs uppercase tracking-wide font-bold block mb-1">${c.label}</label>
+                                <input id="gate-code-${i}" type="text" maxlength="16" autocomplete="off" spellcheck="false"
+                                    class="gate-code w-full px-4 py-3 bg-slate-700 border-2 border-slate-500 text-white font-mono text-lg uppercase rounded-xl focus:outline-none focus:border-blue-400 tracking-widest"
                                     placeholder="Enter code...">
-                            </div>
-                            <div>
-                                <label class="text-slate-400 text-xs uppercase tracking-wide font-bold block mb-1">Activity 2 Code</label>
-                                <input id="unlock-code-2" type="text" maxlength="12"
-                                    class="w-full px-4 py-3 bg-slate-700 border-2 border-slate-500 text-white font-mono text-lg uppercase rounded-xl focus:outline-none focus:border-blue-400 tracking-widest"
-                                    placeholder="Enter code...">
-                            </div>
+                            </div>`).join('')}
                         </div>
                         <div id="unlock-feedback" class="mt-3 text-center font-semibold hidden"></div>
                         <button id="unlock-btn" class="w-full mt-4 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-lg transition-colors">
-                            Unlock Case 2 <i class="fas fa-unlock-alt ml-1"></i>
+                            Unlock Case ${CASE_INFO[CASE].num} <i class="fas fa-unlock-alt ml-1"></i>
                         </button>
+                        <p class="text-slate-500 text-xs text-center mt-4">Haven't done ${gate.from} yet? Go back to the dashboard and complete it first — the ${plural ? 'codes are' : 'code is'} shown at the end of its activities.</p>
                     </div>
                 </section>
             `;
 
             function checkCodes() {
-                const v1 = document.getElementById('unlock-code-1').value.trim().toUpperCase();
-                const v2 = document.getElementById('unlock-code-2').value.trim().toUpperCase();
                 const fb = document.getElementById('unlock-feedback');
-                const correct1 = v1 === activityCodes.activity1.toUpperCase();
-                const correct2 = v2 === activityCodes.activity2.toUpperCase();
-
-                // Per-field visual feedback
-                document.getElementById('unlock-code-1').style.borderColor = v1 === '' ? '' : (correct1 ? '#10b981' : '#ef4444');
-                document.getElementById('unlock-code-2').style.borderColor = v2 === '' ? '' : (correct2 ? '#10b981' : '#ef4444');
-
-                if (correct1 && correct2) {
-                    fb.textContent = '✅ Both codes correct! Proceeding to Case 2...';
+                const wrong = [];
+                gate.codes.forEach((c, i) => {
+                    const input = document.getElementById(`gate-code-${i}`);
+                    const v = input.value.trim().toUpperCase();
+                    const ok = v === activityCodes[c.key].toUpperCase();
+                    input.style.borderColor = v === '' ? '' : (ok ? '#10b981' : '#ef4444');
+                    if (!ok) wrong.push(c.label);
+                });
+                fb.classList.remove('hidden');
+                if (wrong.length === 0) {
+                    fb.textContent = `✅ ${plural ? 'Codes' : 'Code'} correct! Opening Case ${CASE_INFO[CASE].num}...`;
                     fb.className = 'mt-3 text-center font-semibold text-green-400';
-                    fb.classList.remove('hidden');
-                    correctCodesEntered.activity1 = true;
-                    correctCodesEntered.activity2 = true;
-                    saveState();
                     document.getElementById('unlock-btn').disabled = true;
-                    setTimeout(() => { inPatientChart = true; currentChartStep = 0; saveState(); renderStep(); }, 1500);
+                    P.unlocked = true;
+                    saveState();
+                    setTimeout(renderStep, 1000);
                 } else {
-                    const wrong = [];
-                    if (!correct1) wrong.push('Activity 1');
-                    if (!correct2) wrong.push('Activity 2');
-                    fb.textContent = '❌ Incorrect code(s) for: ' + wrong.join(', ') + '. Check your notes and try again.';
+                    fb.textContent = '❌ Incorrect: ' + wrong.join(', ') + '. Check your notes and try again.';
                     fb.className = 'mt-3 text-center font-semibold text-red-400';
-                    fb.classList.remove('hidden');
                 }
             }
-
             document.getElementById('unlock-btn').onclick = checkCodes;
-            ['unlock-code-1','unlock-code-2'].forEach(id => {
-                document.getElementById(id).addEventListener('keypress', e => { if (e.key === 'Enter') checkCodes(); });
+            document.querySelectorAll('.gate-code').forEach(input => {
+                input.addEventListener('keypress', e => { if (e.key === 'Enter') checkCodes(); });
             });
+            const first = document.getElementById('gate-code-0');
+            if (first) first.focus();
         }
 
         function renderPatientChart(step) {
             setActivityMode(false);
-            if (!caseTimerDone.anna) finishCaseTimer('anna');
             startCaseTimer('tyler');
             markCaseStarted('tyler');
 
@@ -3017,6 +3384,16 @@
                 </section>
             `;
             backButton.classList.remove('hidden'); nextButton.classList.remove('hidden');
+            // Tyler's checkbox decision points are unscored — save the selections when the
+            // student moves on, so they appear in the Sheet's "Unscored Decision Point Answers".
+            if ((step.type === 'decision-point-1' || step.type === 'decision-point-2') && !reviewMode) {
+                const inputName = step.type === 'decision-point-1' ? 'diagnosis1' : 'diagnosis2';
+                const label = step.type === 'decision-point-1' ? 'Decision Point #1 differentials (selection)' : 'Decision Point #2 likely differentials (selection)';
+                onLeaveStep = () => {
+                    const checked = Array.from(document.querySelectorAll(`input[name="${inputName}"]:checked`)).map(c => c.value);
+                    recordUnscoredAnswer('tyler', label, checked.length ? checked.join(', ') : '(none selected)');
+                };
+            }
             if (step.type === 'final-congrats') {
                 nextButton.classList.add('hidden');
                 finishCaseTimer('tyler');
@@ -3058,9 +3435,7 @@
                     const sName = getStudentName() || 'Student';
                     generateCertificate("Case 2: Tyler's Case", sName, tylerScore, tylerTotal, tylerPassed);
                 };
-                document.getElementById('next-patient-button').onclick = () => {
-                    inSecondPatient = true; currentSecondPatientStep = 0; saveState(); renderStep();
-                };
+
             }
             if (step.type === 'decision-point-3') {
                 nextButton.classList.add('hidden');
@@ -3117,6 +3492,10 @@
             }
             if (step.type === 'hannah-headache-classification') {
                 renderHannahHeadacheClassification(step);
+                return;
+            }
+            if (step.type === 'hannah-pertinent-positives' || step.type === 'hannah-pertinent-negatives') {
+                renderFindingsSort(step);
                 return;
             }
             contentArea.innerHTML = `
@@ -3206,7 +3585,7 @@
                     const checked = Array.from(document.querySelectorAll('input[name="hannah-dx"]:checked')).map(c => c.value);
                     recordUnscoredAnswer('hannah', 'Top 4 differential diagnoses (selection)', checked.length ? checked.join(', ') : '(none selected)');
                 };
-                nextButton.addEventListener('click', recordHannahDx, { once: true });
+                if (!reviewMode) onLeaveStep = recordHannahDx;
             }
 
             if (step.type === 'hannah-decision-point-2') {
@@ -3234,48 +3613,6 @@
                 };
                 document.getElementById('submit-order').onclick = submitOrder;
                 document.getElementById('order-input').addEventListener('keypress', (e) => { if (e.key === 'Enter') submitOrder(); });
-            }
-
-            const quizHandlers = {
-                'hannah-quiz-1': { id: 'submit-quiz1', feedbackId: 'quiz1-feedback', name: 'quiz1', correct: 'A', msg: 'This accurately describes the pertinent findings for migraine with aura.', label: 'Migraine with aura: Pertinent positive findings' },
-                'hannah-quiz-2': { id: 'submit-quiz2', feedbackId: 'quiz2-feedback', name: 'quiz2', correct: 'B', msg: 'This accurately describes medication overuse headache.', label: 'Medication overuse headache: Pertinent positive findings' },
-                'hannah-quiz-3': { id: 'submit-quiz3', feedbackId: 'quiz3-feedback', name: 'quiz3', correct: 'B', msg: 'This accurately describes tension-type headaches.', label: 'Tension-type headache: Pertinent positive findings' },
-                'hannah-quiz-4': { id: 'submit-quiz4', feedbackId: 'quiz4-feedback', name: 'quiz4', correct: 'D', msg: 'This accurately describes cluster headaches.', label: 'Cluster headache: Pertinent positive findings' },
-                'hannah-quiz-5': { id: 'submit-quiz5', feedbackId: 'quiz5-feedback', name: 'quiz5', correct: '3', msg: 'There are no pertinent negative findings for migraine with aura in this context.', label: 'Migraine with aura: Pertinent negative findings' },
-                'hannah-quiz-6': { id: 'submit-quiz6', feedbackId: 'quiz6-feedback', name: 'quiz6', correct: '4', msg: 'Headache characteristics and duration can be variable depending on medication type and impact on the user.', label: 'Medication overuse headache: Pertinent negative findings' },
-                'hannah-quiz-7': { id: 'submit-quiz7', feedbackId: 'quiz7-feedback', name: 'quiz7', correct: '1', msg: 'Correct! Tension-type headache lacks fixed diagnostic criteria for duration/quality — its variability (e.g., with medication overuse or functional impact) is itself the pertinent negative.', label: 'Tension-type headache: Pertinent negative findings' },
-                'hannah-quiz-8': { id: 'submit-quiz8', feedbackId: 'quiz8-feedback', name: 'quiz8', correct: '4', msg: 'The absence of the typical 10-72 hour throbbing headache pattern is a pertinent negative for cluster headache.', label: 'Cluster headache: Pertinent negative findings' }
-            };
-            if (quizHandlers[step.type]) {
-                nextButton.classList.add('hidden');
-                const h = quizHandlers[step.type];
-                let quizTries = 0;
-                document.getElementById(h.id).onclick = () => {
-                    const selected = document.querySelector(`input[name="${h.name}"]:checked`);
-                    const fb = document.getElementById(h.feedbackId);
-                    if (!selected) {
-                        fb.textContent = 'Please select an answer before submitting.';
-                        fb.className = 'mt-4 text-center font-semibold text-red-600';
-                        fb.classList.remove('hidden');
-                        return;
-                    }
-                    if (selected.value === h.correct) {
-                        fb.textContent = `Correct! ${h.msg}`; fb.className = 'mt-4 text-center font-semibold text-green-600'; fb.classList.remove('hidden');
-                        awardPoint(step.type, true);
-                        nextButton.classList.remove('hidden');
-                    } else {
-                        quizTries++;
-                        if (quizTries >= 2) {
-                            fb.innerHTML = `❌ Incorrect after 2 attempts. <strong>Correct answer: ${h.correct}</strong> — ${h.msg}`; fb.className = 'mt-4 text-center font-semibold text-red-600'; fb.classList.remove('hidden');
-                            document.querySelectorAll(`input[name="${h.name}"]`).forEach(r => r.disabled = true);
-                            document.getElementById(h.id).disabled = true;
-                            awardPoint(step.type, false, { question: h.label, given: selected.value, correct: h.correct });
-                            nextButton.classList.remove('hidden');
-                        } else {
-                            fb.textContent = 'Incorrect. You have 1 attempt remaining — please review the case details carefully.'; fb.className = 'mt-4 text-center font-semibold text-red-600'; fb.classList.remove('hidden');
-                        }
-                    }
-                };
             }
 
             // Diagnostics: c is correct — 2 tries max
@@ -3465,24 +3802,46 @@
             }
 
             if (step.type === 'hannah-final-summary') {
-                nextButton.classList.add('hidden');
-                backButton.classList.add('hidden');
-                const pct = globalScore.total > 0 ? Math.round((globalScore.correct / globalScore.total) * 100) : 0;
-                const passed = pct >= 70; // 70% pass threshold
+                // Overall result across all three cases (each case is saved separately).
+                const results = CASE_IDS.map(id => {
+                    if (id === CASE) return P.result;
+                    try {
+                        const other = JSON.parse(localStorage.getItem(`ner_v2_progress::${STUDENT}::${id}`) || 'null');
+                        return other && other.result ? other.result : null;
+                    } catch (e) { return null; }
+                });
+                const allDone = results.every(Boolean);
+                const intro = document.getElementById('final-summary-intro');
+                const closing = document.getElementById('final-summary-closing');
                 const scoreBox = document.getElementById('final-score-box');
-                if (scoreBox) {
-                    scoreBox.className = `mt-6 p-6 rounded-xl border-2 ${passed ? 'bg-green-50 border-green-300' : 'bg-amber-50 border-amber-300'}`;
+                const rows = CASE_IDS.map((id, i) => {
+                    const r = results[i];
+                    return `<div class="flex justify-between py-1 border-b border-black/5 text-sm">
+                        <span>Case ${CASE_INFO[id].num}: ${CASE_INFO[id].name}</span>
+                        <span class="font-semibold">${r ? `${r.correct} / ${r.total} (${r.pct}%)` : 'Not completed yet'}</span>
+                    </div>`;
+                }).join('');
+                if (allDone) {
+                    const correct = results.reduce((n, r) => n + r.correct, 0);
+                    const total = results.reduce((n, r) => n + r.total, 0);
+                    const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
+                    const passed = pct >= 70; // 70% pass threshold
+                    intro.innerHTML = `<h3 class="text-lg font-bold text-blue-800 mb-3">&#127942; You have completed all three patient cases!</h3>
+                        <p class="text-blue-700 text-sm">You've worked through Anna Jacobs, Tyler Haley, and Hannah Howard. Don't forget to download your certificate for each case and upload them to your Moodle course shell.</p>`;
+                    scoreBox.className = `mt-6 p-6 rounded-xl border-2 text-left ${passed ? 'bg-green-50 border-green-300 text-green-800' : 'bg-amber-50 border-amber-300 text-amber-800'}`;
                     scoreBox.innerHTML = `
-                        <h3 class="text-lg font-bold ${passed ? 'text-green-800' : 'text-amber-800'} mb-2">Your Final Score</h3>
-                        <p class="text-4xl font-extrabold ${passed ? 'text-green-700' : 'text-amber-700'} mb-2">${globalScore.correct} / ${globalScore.total}</p>
-                        <p class="text-lg font-semibold ${passed ? 'text-green-700' : 'text-amber-700'}">(${pct}%) — ${passed ? 'PASS' : 'FAIL'}</p>
-                        <p class="text-sm ${passed ? 'text-green-700' : 'text-amber-700'} mt-2">${passed ? 'Great work! You met the 70% threshold across all three cases.' : 'You did not meet the 70% threshold this time — consider reviewing the cases with your instructor during debrief.'}</p>
-                    `;
-                }
-                saveStudentCaseData('hannah', { finalScore: { correct: globalScore.correct, total: globalScore.total, percent: pct, passed } });
-                const returnBtn = document.getElementById('return-home-btn');
-                if (returnBtn) {
-                    returnBtn.onclick = () => { window.location.href = 'home.html'; };
+                        <h3 class="text-lg font-bold mb-2 text-center">Your Overall Score</h3>
+                        <p class="text-4xl font-extrabold mb-2 text-center">${correct} / ${total}</p>
+                        <p class="text-lg font-semibold text-center">(${pct}%) — ${passed ? 'PASS' : 'FAIL'}</p>
+                        <div class="mt-4">${rows}</div>
+                        <p class="text-sm mt-3 text-center">${passed ? 'Great work! You met the 70% threshold across all three cases.' : 'You did not meet the 70% threshold this time — consider reviewing the cases with your instructor during debrief.'}</p>`;
+                    closing.textContent = 'Congratulations on completing the TRU MN-NP Program Escape Room!';
+                } else {
+                    intro.innerHTML = `<h3 class="text-lg font-bold text-blue-800 mb-3">&#127942; You have completed Case 3: Hannah Howard!</h3>
+                        <p class="text-blue-700 text-sm">Return to the dashboard to finish any remaining cases. Don't forget to download your certificate for each case and upload them to your Moodle course shell.</p>`;
+                    scoreBox.className = 'mt-6 p-6 rounded-xl border-2 text-left bg-slate-50 border-slate-300 text-slate-800';
+                    scoreBox.innerHTML = `<h3 class="text-lg font-bold mb-2 text-center">Your Progress</h3>${rows}`;
+                    closing.textContent = 'Great work on Hannah\'s case!';
                 }
             }
         }
@@ -3490,31 +3849,87 @@
         // =====================================================================
         // MAIN RENDER DISPATCHER
         // =====================================================================
+        // Multi-screen activities manage their own inner screens. Once finished, revisiting
+        // them shows the saved review (score + code) instead of replaying the activity.
+        const ACTIVITY_TYPES = ['activity1', 'activity2', 'activity3', 'hannah-headache-classification', 'hannah-pertinent-positives', 'hannah-pertinent-negatives'];
+
+        function stepsForCase() {
+            return CASE === 'tyler' ? patientChartSteps
+                 : CASE === 'hannah' ? secondPatientSteps
+                 : steps;
+        }
+
+        function isStepCompleted(index, step) {
+            if (ACTIVITY_TYPES.includes(step.type)) return !!(P.act[step.type] && P.act[step.type].finished);
+            return index < P.furthest || !!P.answered[index];
+        }
+
+        // Called when an activity reaches its review screen: remember the review so it can
+        // be shown again (with the code) whenever the student comes back to this page.
+        function finishActivity(type) {
+            P.act[type] = Object.assign(P.act[type] || {}, { finished: true, reviewHtml: contentArea.innerHTML });
+            P.answered[P.step] = true;
+            saveState();
+        }
+
+        function goToStep(index) {
+            const list = stepsForCase();
+            P.step = Math.max(0, Math.min(index, list.length - 1));
+            P.furthest = Math.max(P.furthest, P.step);
+            saveState();
+            renderStep();
+        }
+
+        const REVIEW_KEEP = '[data-keep], #start-button, #return-home-btn, [id$="cert-btn"], summary';
+
+        function reviewBanner(text) {
+            return `<div class="review-banner mb-2 px-4 py-3 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-800 text-sm font-semibold flex items-center gap-2">
+                <i class="fas fa-check-circle text-emerald-500"></i><span>${text}</span></div>`;
+        }
+
+        // Lock a completed question page: inputs become read-only and Next is always available.
+        function lockCompletedPage() {
+            let locked = 0;
+            contentArea.querySelectorAll('button, input, select, textarea').forEach(el => {
+                if (el.matches(REVIEW_KEEP)) return;
+                el.disabled = true;
+                el.classList.add('cursor-not-allowed', 'opacity-60');
+                locked++;
+            });
+            if (locked > 0) {
+                contentArea.insertAdjacentHTML('afterbegin',
+                    reviewBanner('You have already completed this question — your answer has been saved. Click <strong>Next</strong> to continue.'));
+            }
+        }
+
         function renderStep() {
             feedbackDiv.classList.add('hidden');
-            // Keep the page header title in sync with whichever case is currently active
+            onLeaveStep = null;
             const headerH1 = document.querySelector('header h1');
-            if (headerH1) {
-                if (inSecondPatient) {
-                    headerH1.textContent = 'Headache Case 3: Hannah Howard';
-                } else if (inPatientChart) {
-                    headerH1.textContent = 'Headache Case 2: Tyler Haley';
-                } else {
-                    headerH1.textContent = 'Headache Case 1: Anna Jacobs';
-                }
-            }
-            if (inAnnaPatient) {
-                // annaPatientSteps array exhausted — no longer used; redirect to anna management
-                inAnnaPatient = false; saveState(); renderStep(); return;
-            } else if (inSecondPatient) {
-                const step = secondPatientSteps[currentSecondPatientStep];
-                if (step) renderSecondPatient(step);
-            } else if (inPatientChart) {
-                const step = patientChartSteps[currentChartStep];
-                if (step) renderPatientChart(step);
+            if (headerH1 && CASE) headerH1.textContent = CASE_INFO[CASE].title;
+
+            // Case 2 / Case 3 open with the code gate until unlocked
+            if (!P.unlocked) { renderCaseGate(); window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+
+            const list = stepsForCase();
+            if (P.step < 0 || P.step >= list.length) P.step = Math.max(0, Math.min(P.step, list.length - 1));
+            if (P.furthest < P.step) P.furthest = P.step;
+            const step = list[P.step];
+            reviewMode = isStepCompleted(P.step, step);
+            // Kept in sync for any older code that still reads these
+            currentStep = currentChartStep = currentSecondPatientStep = P.step;
+
+            if (reviewMode && ACTIVITY_TYPES.includes(step.type) && P.act[step.type].reviewHtml) {
+                // Finished activity: show the saved review instead of replaying it
+                setActivityMode(false);
+                startCaseTimer(CASE);
+                contentArea.innerHTML = reviewBanner('You have already completed this activity — here is your review. Click <strong>Next</strong> to continue.')
+                    + P.act[step.type].reviewHtml;
+            } else if (CASE === 'hannah') {
+                renderSecondPatient(step);
+            } else if (CASE === 'tyler') {
+                renderPatientChart(step);
             } else {
-                const step = steps[currentStep];
-                updateProgressBar();
                 switch (step.type) {
                     case 'intro': setActivityMode(false); renderIntroStep(step); break;
                     case 'section-banner-anna-1':
@@ -3549,6 +3964,24 @@
                     case 'conclusion': setActivityMode(false); renderConclusionStep(step); break;
                 }
             }
+
+            if (reviewMode && !ACTIVITY_TYPES.includes(step.type)) lockCompletedPage();
+
+            // Navigation rules (applied after the page renders, so they always win):
+            //  - Back is available on every page except the first one.
+            //  - Next is available on any completed page; otherwise the page decides.
+            //  - The last page of the case has no Next.
+            const isFirst = P.step === 0;
+            const isLast = P.step === list.length - 1;
+            backButton.classList.toggle('hidden', isFirst);
+            if (reviewMode) nextButton.classList.remove('hidden');
+            if (isLast) nextButton.classList.add('hidden');
+
+            const homeBtn = document.getElementById('return-home-btn');
+            if (homeBtn) homeBtn.onclick = () => { window.location.href = 'home.html'; };
+
+            updateProgressBar();
+            updateCaseTimerDisplay();
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
@@ -3556,141 +3989,75 @@
         // EVENT LISTENERS
         // =====================================================================
         nextButton.onclick = () => {
-            if (inAnnaPatient) {
-                currentAnnaStep++;
-            } else if (inSecondPatient) {
-                currentSecondPatientStep++;
-            } else if (inPatientChart) {
-                currentChartStep++;
-            } else {
-                currentStep++;
+            if (typeof onLeaveStep === 'function') {
+                try { onLeaveStep(); } catch (err) { console.error(err); }
+                onLeaveStep = null;
             }
-            saveState(); renderStep();
+            goToStep(P.step + 1); // moving past a page marks it as completed (P.furthest)
         };
 
         backButton.onclick = () => {
-            if (inAnnaPatient) {
-                currentAnnaStep--;
-                if (currentAnnaStep < 0) {
-                    inAnnaPatient = false;
-                    inSecondPatient = true;
-                    currentSecondPatientStep = secondPatientSteps.length - 1;
-                }
-            } else if (inSecondPatient) {
-                currentSecondPatientStep--;
-                if (currentSecondPatientStep < 0) {
-                    inSecondPatient = false;
-                    currentChartStep = patientChartSteps.length - 1;
-                    inPatientChart = true;
-                }
-            } else if (inPatientChart) {
-                currentChartStep--;
-                if (currentChartStep < 0) {
-                    inPatientChart = false;
-                    currentStep = steps.findIndex(s => s.type === 'conclusion');
-                }
-            } else {
-                currentStep--;
-            }
-            saveState(); renderStep();
+            onLeaveStep = null;
+            if (P.step > 0) goToStep(P.step - 1);
         };
 
-
-        // =====================================================================
-        // BROWSER BACK BUTTON PROTECTION
-        // Push a dummy history entry so browser back hits our handler
-        history.pushState({ escapeRoom: true }, '', window.location.href);
-        window.addEventListener('popstate', function(e) {
-            // Student hit browser back — push forward again to stay on page
-            history.pushState({ escapeRoom: true }, '', window.location.href);
-            // Show warning
-            const confirmed = window.confirm(
-                '⚠️ Are you sure you want to go back?\n\n' +
-                'Leaving this page will NOT erase your progress — ' +
-                'your answers and position are saved automatically.\n\n' +
-                'Click OK to stay on the escape room.\n' +
-                'Click Cancel to continue navigating away.'
-            );
-            // confirmed = they clicked OK = stay (we already pushed state, so they stay)
-            // !confirmed = they clicked Cancel = let them navigate away
-            if (!confirmed) {
-                // Remove our protection and go back for real
-                history.go(-2);
-            }
-        });
-
+        // Keep the saved position up to date if the tab is hidden (computer sleeping, tab switched)
+        document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') saveState(); });
+        window.addEventListener('pagehide', () => saveState());
 
         // =====================================================================
         // UTILITY FUNCTIONS (recovered)
         // =====================================================================
 
         function saveState() {
-            localStorage.setItem('correctCodesEntered', JSON.stringify(correctCodesEntered));
-            localStorage.setItem('enteredCodes', JSON.stringify(enteredCodes));
-            localStorage.setItem('activityScores', JSON.stringify(activityScores));
-            localStorage.setItem('mainTimeElapsed', mainTimeElapsed);
-            localStorage.setItem('currentQuestionIndex_activity2', currentQuestionIndex);
-            localStorage.setItem('activity2CorrectCount', activity2CorrectCount);
-            localStorage.setItem('inPatientChart', inPatientChart);
-            localStorage.setItem('currentChartStep', currentChartStep);
-            localStorage.setItem('inSecondPatient', inSecondPatient);
-            localStorage.setItem('currentSecondPatientStep', currentSecondPatientStep);
-            localStorage.setItem('inAnnaPatient', inAnnaPatient);
-            localStorage.setItem('currentAnnaStep', currentAnnaStep);
-            localStorage.setItem('caseTimers', JSON.stringify(caseTimers));
-            localStorage.setItem('caseTimerDone', JSON.stringify(caseTimerDone));
-            localStorage.setItem('activeCaseTimer', activeCaseTimer || '');
-            localStorage.setItem('globalScore', JSON.stringify(globalScore));
-            localStorage.setItem('caseScores', JSON.stringify(caseScores));
-            localStorage.setItem('caseMistakes', JSON.stringify(caseMistakes));
-            localStorage.setItem('caseUnscoredAnswers', JSON.stringify(caseUnscoredAnswers));
+            if (!BOOT_OK) return;
+            P.time = caseTimers[CASE] || 0;
+            P.timerDone = !!caseTimerDone[CASE];
+            P.totalSteps = stepsForCase().length;
+            P.lastUpdated = new Date().toISOString();
+            try {
+                localStorage.setItem(PROGRESS_KEY, JSON.stringify(P));
+            } catch (e) {
+                console.error('Could not save progress', e);
+            }
         }
 
         // Award one point for a correct answer to a given question key.
         // Each unique key only ever contributes once to the total (first attempt counted),
         // so retries on the same question never inflate the maximum possible score.
         function awardPoint(key, isCorrect, meta = {}) {
-            if (!globalScore.answeredKeys.includes(key)) {
-                globalScore.answeredKeys.push(key);
-                globalScore.total++;
-                if (isCorrect) globalScore.correct++;
-                // Also track per-case score
-                const casePrefix = key.startsWith('anna-') ? 'anna'
-                                 : key.startsWith('tyler-') ? 'tyler'
-                                 : key.startsWith('hannah-') ? 'hannah'
-                                 : null;
-                if (casePrefix && !caseScores[casePrefix].answeredKeys.includes(key)) {
-                    caseScores[casePrefix].answeredKeys.push(key);
-                    caseScores[casePrefix].total++;
-                    if (isCorrect) caseScores[casePrefix].correct++;
-                    if (!isCorrect) {
-                        caseMistakes[casePrefix].push({
-                            question: meta.question || key,
-                            given: meta.given || (meta.skipped ? '' : ''),
-                            correct: meta.correct || '',
-                            skipped: !!meta.skipped
-                        });
-                        localStorage.setItem('caseMistakes', JSON.stringify(caseMistakes));
-                    }
-                }
-                saveState();
-                const scoreBadge = document.getElementById('timer-score');
-                if (scoreBadge) scoreBadge.textContent = `⭐ Score: ${globalScore.correct} / ${globalScore.total}`;
+            if (P.score.answeredKeys.includes(key)) return;
+            P.score.answeredKeys.push(key);
+            P.score.total++;
+            if (isCorrect) P.score.correct++;
+            else {
+                P.mistakes.push({
+                    question: meta.question || key,
+                    given: meta.given || '',
+                    correct: meta.correct || '',
+                    skipped: !!meta.skipped
+                });
             }
+            P.answered[P.step] = true;
+            saveState();
+            updateCaseTimerDisplay();
         }
 
         // Records an answer to a free-text / no-point decision-point question
         // (e.g. Anna's DP1 free-response, Hannah's checkbox differential list)
         // for inclusion in the "Unscored Decision Point Answers" sheet column.
         function recordUnscoredAnswer(caseId, question, answer) {
-            if (!caseUnscoredAnswers[caseId]) caseUnscoredAnswers[caseId] = [];
-            caseUnscoredAnswers[caseId].push({ question, answer });
-            localStorage.setItem('caseUnscoredAnswers', JSON.stringify(caseUnscoredAnswers));
+            // Re-answering the same question replaces the earlier answer instead of duplicating it
+            const existing = P.unscored.findIndex(u => u.question === question);
+            if (existing >= 0) P.unscored.splice(existing, 1);
+            P.unscored.push({ question, answer });
+            P.answered[P.step] = true;
+            saveState();
         }
 
         function updateProgressBar() {
-            const completedActivities = Object.values(correctCodesEntered).filter(status => status).length;
-            const progress = (completedActivities / Object.keys(activityCodes).length) * 100;
+            const total = Math.max(1, stepsForCase().length - 1);
+            const progress = P.unlocked ? Math.min(100, (P.furthest / total) * 100) : 0;
             progressBar.style.width = `${progress}%`;
         }
 
@@ -3714,29 +4081,33 @@
         }
 
         function getStudentName() {
-            return localStorage.getItem('ner_current_student') || 'Unknown Student';
+            return STUDENT || 'Unknown Student';
         }
 
         function startCaseTimer(caseName) {
+            if (caseName !== CASE || caseTimerDone[caseName]) return; // finished cases stop counting
             if (activeCaseTimer === caseName) return; // already running
             stopCaseTimer();
             activeCaseTimer = caseName;
             document.getElementById('case-timers').classList.remove('hidden');
-            // Mark as active
-            ['anna','tyler','hannah'].forEach(c => {
-                const badge = document.getElementById(`timer-${c}`);
-                badge.classList.remove('active','done');
-                if (caseTimerDone[c]) badge.classList.add('done');
-                else if (c === caseName) badge.classList.add('active');
-            });
+            const badge = document.getElementById(`timer-${caseName}`);
+            if (badge) { badge.classList.remove('done'); badge.classList.add('active'); }
             caseTimerInterval = setInterval(() => {
                 caseTimers[caseName]++;
                 updateCaseTimerDisplay();
-                saveState();
+                if (caseTimers[caseName] % 5 === 0) saveState();
             }, 1000);
         }
 
         function markCaseCompleted(caseId, extraData = {}) {
+            // Only send the result once — revisiting the final page must not create duplicate rows
+            if (P.completedPosted) return;
+            const finalScore = extraData.totalScore || P.score;
+            const resultPct = finalScore.total > 0 ? Math.round((finalScore.correct / finalScore.total) * 100) : 0;
+            P.result = { correct: finalScore.correct || 0, total: finalScore.total || 0, pct: resultPct,
+                         passed: resultPct >= 70, time: caseTimers[caseId] || 0, completedAt: new Date().toISOString() };
+            P.completedPosted = true;
+            saveState();
             const finalData = {
                 completed: true,
                 caseTime: caseTimers[caseId] || 0,
@@ -3774,47 +4145,13 @@
             const merged = { ...existing, ...data, studentName: student, caseId, lastUpdated: new Date().toISOString() };
             localStorage.setItem(key, JSON.stringify(merged));
 
-            // Mirror to Google Sheets
-            postToSheets('saveSession', { studentName: student, caseId, data: merged });
-
-            // If there are activity logs in this data, also post them
-            ['activity1Log','activity2Log','activity3Part1Log','activity3Part2Log','activity3Part3Log'].forEach(logKey => {
-                if (data[logKey]) {
-                    const topicMap = {
-                        activity1Log:      'Activity 1 — Headache Classification',
-                        activity2Log:      'Activity 2 — Red Flag MCQs',
-                        activity3Part1Log: 'Activity 3 Pt1 — Red/Green Flag Sort',
-                        activity3Part2Log: 'Activity 3 Pt2 — SNNOOP10 Fill-in',
-                        activity3Part3Log: 'Activity 3 Pt3 — True/False'
-                    };
-                    const mistakes = data[logKey]
-                        .filter(l => !l.wasCorrect)
-                        .map(l => ({ ...l, topic: topicMap[logKey] }));
-                    if (mistakes.length) {
-                        postToSheets('saveMistakes', { studentName: student, caseId, mistakes });
-                    }
-                }
-            });
-
-            // Post activity scores
-            const scoreMap = {
-                activity1Score: 'Activity 1',
-                activity2Score: 'Activity 2',
-                activity3Score: 'Activity 3'
-            };
-            Object.entries(scoreMap).forEach(([key, label]) => {
-                if (data[key]) {
-                    postToSheets('saveActivityScore', {
-                        studentName: student, caseId,
-                        activity: label, score: data[key]
-                    });
-                }
-            });
+            // (Detailed activity logs stay in this browser. Only the final case result is sent
+            // to the Google Sheet — see markCaseCompleted — because that is all Code.gs records.)
         }
 
 
         function postToSheets(action, payload) {
-            if (!SHEETS_URL) return; // no URL configured yet — local only
+            if (!SHEETS_URL || !SHEET_LOGGING_ENABLED) return; // local preview — nothing sent
             fetch(SHEETS_URL, {
                 method: 'POST',
                 mode: 'no-cors', // required for Apps Script
@@ -3911,43 +4248,39 @@
         // =====================================================================
         // INITIALIZE
         // =====================================================================
-        // Show student name banner
-        const studentName = getStudentName();
-        if (studentName && studentName !== 'Unknown Student') {
-            document.getElementById('banner-student-name').textContent = studentName;
+        if (!BOOT_OK) {
+            // Opened without logging in, or without choosing a case — send them to the dashboard.
+            document.querySelector('header h1').textContent = 'TRU MN-NP Program Escape Room';
+            document.getElementById('room-subtitle').textContent = '';
+            document.getElementById('progress-container').classList.add('hidden');
+            contentArea.innerHTML = `
+                <section class="text-center py-10">
+                    <i class="fas fa-user-lock text-5xl text-blue-500 mb-4"></i>
+                    <h2 class="text-2xl font-bold text-gray-800 mb-2">${STUDENT ? 'Please choose a case' : 'Please log in first'}</h2>
+                    <p class="text-gray-600 mb-6">${STUDENT
+                        ? 'Open a patient case from the escape room dashboard.'
+                        : 'Enter your name and the class password on the escape room dashboard, then start a case from there.'}</p>
+                    <a href="home.html" class="inline-block px-8 py-4 bg-blue-600 text-white rounded-lg font-semibold shadow-md hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-house mr-2"></i>Go to Dashboard
+                    </a>
+                </section>`;
+        } else {
+            document.title = `${CASE_INFO[CASE].title} — TRU MN-NP Escape Room`;
+            document.getElementById('banner-student-name').textContent = STUDENT;
             document.getElementById('student-banner').classList.remove('hidden');
             document.body.style.paddingTop = '2.5rem';
-        }
-
-        // CHANGE 3: Warn before browser navigation away (back button, closing tab)
-        window.addEventListener('beforeunload', (e) => {
-            e.preventDefault();
-            e.returnValue = 'You will lose your current quiz progress if you leave. Are you sure?';
-            return e.returnValue;
-        });
-
-        renderStep();
-        updateCodeInputStates();
-        updateProgressBar();
-        timerDisplay.textContent = `Time Elapsed: ${formatTime(mainTimeElapsed)}`;
-        // Restore case timers display
-        updateCaseTimerDisplay();
-        if (caseTimers.anna > 0 || caseTimers.tyler > 0 || caseTimers.hannah > 0) {
+            if (!SHEET_LOGGING_ENABLED) {
+                document.getElementById('student-banner').insertAdjacentHTML('beforeend',
+                    '<span class="text-amber-300 text-xs font-semibold">Local preview — results are not sent to the Google Sheet</span>');
+            }
+            // Only this case's timer is shown on this tab
+            CASE_IDS.forEach(c => { if (c !== CASE) document.getElementById(`timer-${c}`).classList.add('hidden'); });
             document.getElementById('case-timers').classList.remove('hidden');
-        }
-        ['anna','tyler','hannah'].forEach(c => {
-            const badge = document.getElementById(`timer-${c}`);
-            badge.classList.remove('active','done');
-            if (caseTimerDone[c]) badge.classList.add('done');
-        });
-        // Resume any active case timer
-        if (activeCaseTimer && !caseTimerDone[activeCaseTimer]) {
-            startCaseTimer(activeCaseTimer);
-        }
-        if (Object.values(correctCodesEntered).every(Boolean)) {
-            clearInterval(mainTimerInterval);
-        } else if (currentStep > 0 || inPatientChart || inSecondPatient || inAnnaPatient) {
-            startMainTimer();
+            const myBadge = document.getElementById(`timer-${CASE}`);
+            if (caseTimerDone[CASE]) myBadge.classList.add('done');
+
+            renderStep();
+            saveState();
         }
     </script>
 </body>
