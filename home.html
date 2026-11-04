@@ -25,11 +25,11 @@
             <p class="text-blue-300 text-xl mt-3">Headaches Scenarios — Interactive Clinical Reasoning</p>
         </div>
 
-        <!-- Case Cards (info only) -->
+        <!-- Case Cards — each case is started separately and opens in its own tab -->
         <div id="case-grid" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
 
             <!-- Anna Jacobs -->
-            <div class="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-600 rounded-2xl p-6">
+            <div class="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-600 rounded-2xl p-6 flex flex-col">
                 <div class="flex items-center justify-between mb-4">
                     <span class="bg-emerald-500/20 text-emerald-300 text-xs font-bold uppercase tracking-wide px-3 py-1 rounded-full">Patient 1</span>
                     <span id="anna-status" class="text-slate-500 text-xs"><i class="fas fa-circle text-slate-600"></i> Not started</span>
@@ -42,13 +42,21 @@
                 <div class="space-y-1 text-xs text-slate-400">
                     <div class="flex items-center gap-2"><i class="fas fa-clipboard-list text-emerald-400"></i> History, Exam & Diagnosis</div>
                     <div class="flex items-center gap-2"><i class="fas fa-pills text-emerald-400"></i> Management Planning</div>
-                    <div class="flex items-center gap-2"><i class="fas fa-puzzle-piece text-emerald-400"></i> Activities 1, 2 & 3 (SNNOOP10)</div>
+                    <div class="flex items-center gap-2"><i class="fas fa-puzzle-piece text-emerald-400"></i> Activities 1 & 2 (Classification, Red Flags)</div>
                 </div>
                 <div id="anna-time" class="text-emerald-400 text-xs font-semibold mt-3 hidden"><i class="fas fa-clock mr-1"></i><span></span></div>
+                <div class="mt-auto pt-5">
+                    
+                    <p id="anna-progress" class="text-slate-400 text-xs mb-2 hidden"></p>
+                    <button type="button" id="anna-start-btn" data-case="anna" disabled
+                        class="case-start-btn w-full px-4 py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-emerald-600">
+                        Log in below to start
+                    </button>
+                </div>
             </div>
 
             <!-- Tyler Haley -->
-            <div class="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-600 rounded-2xl p-6">
+            <div class="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-600 rounded-2xl p-6 flex flex-col">
                 <div class="flex items-center justify-between mb-4">
                     <span class="bg-blue-500/20 text-blue-300 text-xs font-bold uppercase tracking-wide px-3 py-1 rounded-full">Patient 2</span>
                     <span id="tyler-status" class="text-slate-500 text-xs"><i class="fas fa-circle text-slate-600"></i> Not started</span>
@@ -62,12 +70,21 @@
                     <div class="flex items-center gap-2"><i class="fas fa-clipboard-list text-blue-400"></i> Red Flag Recognition</div>
                     <div class="flex items-center gap-2"><i class="fas fa-brain text-blue-400"></i> Differential Diagnosis</div>
                     <div class="flex items-center gap-2"><i class="fas fa-ambulance text-blue-400"></i> Emergency Decision Making</div>
+                    <div class="flex items-center gap-2"><i class="fas fa-puzzle-piece text-blue-400"></i> Activity 3 (SNNOOP10)</div>
                 </div>
                 <div id="tyler-time" class="text-blue-400 text-xs font-semibold mt-3 hidden"><i class="fas fa-clock mr-1"></i><span></span></div>
+                <div class="mt-auto pt-5">
+                    <p class="text-slate-500 text-xs mb-2"><i class="fas fa-key mr-1"></i>Unlock with the 2 codes from Case 1</p>
+                    <p id="tyler-progress" class="text-slate-400 text-xs mb-2 hidden"></p>
+                    <button type="button" id="tyler-start-btn" data-case="tyler" disabled
+                        class="case-start-btn w-full px-4 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-blue-600">
+                        Log in below to start
+                    </button>
+                </div>
             </div>
 
             <!-- Hannah Howard -->
-            <div class="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-600 rounded-2xl p-6">
+            <div class="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-600 rounded-2xl p-6 flex flex-col">
                 <div class="flex items-center justify-between mb-4">
                     <span class="bg-purple-500/20 text-purple-300 text-xs font-bold uppercase tracking-wide px-3 py-1 rounded-full">Patient 3</span>
                     <span id="hannah-status" class="text-slate-500 text-xs"><i class="fas fa-circle text-slate-600"></i> Not started</span>
@@ -80,9 +97,17 @@
                 <div class="space-y-1 text-xs text-slate-400">
                     <div class="flex items-center gap-2"><i class="fas fa-clipboard-list text-purple-400"></i> History & Examination</div>
                     <div class="flex items-center gap-2"><i class="fas fa-search text-purple-400"></i> Differential Reasoning</div>
-                    <div class="flex items-center gap-2"><i class="fas fa-check-circle text-purple-400"></i> Clinical Quiz Challenges</div>
+                    <div class="flex items-center gap-2"><i class="fas fa-puzzle-piece text-purple-400"></i> Findings Sorting & Classification</div>
                 </div>
                 <div id="hannah-time" class="text-purple-400 text-xs font-semibold mt-3 hidden"><i class="fas fa-clock mr-1"></i><span></span></div>
+                <div class="mt-auto pt-5">
+                    <p class="text-slate-500 text-xs mb-2"><i class="fas fa-key mr-1"></i>Unlock with the code from Case 2</p>
+                    <p id="hannah-progress" class="text-slate-400 text-xs mb-2 hidden"></p>
+                    <button type="button" id="hannah-start-btn" data-case="hannah" disabled
+                        class="case-start-btn w-full px-4 py-3 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-purple-600">
+                        Log in below to start
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -98,10 +123,11 @@
                         <i class="fas fa-pencil-alt mr-1"></i> Change
                     </button>
                 </div>
-                <button id="begin-btn-logged-in"
-                    class="w-full mt-4 px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-500 transition-colors glow">
-                    Begin Escape Room <i class="fas fa-play ml-2"></i>
-                </button>
+                <p class="mt-4 text-slate-300 text-sm leading-relaxed">
+                    <i class="fas fa-hand-point-up text-blue-400 mr-1"></i>
+                    Choose a patient case above to start. Each case opens in its own tab, and your progress is saved
+                    automatically on this computer — you can close the tab, refresh, or come back later and pick up where you left off.
+                </p>
             </div>
             <div id="name-form">
                 <label class="block text-blue-300 text-sm font-semibold uppercase tracking-wide mb-2">
@@ -133,7 +159,7 @@
 
         <!-- Footer links -->
         <div class="flex justify-between items-center text-sm">
-            <p class="text-slate-500">Complete all three patient cases to finish the escape room.</p>
+            <p class="text-slate-500">Complete all three patient cases to finish the escape room. Codes from each case unlock the next one.</p>
             <a href="dashboard.html" target="_blank" class="text-slate-400 hover:text-white transition-colors">
                 <i class="fas fa-chart-bar mr-1"></i> Instructor Dashboard
             </a>
@@ -154,29 +180,74 @@
             return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
         }
 
+        const CASES = {
+            anna:   { num: 1, color: 'emerald' },
+            tyler:  { num: 2, color: 'blue' },
+            hannah: { num: 3, color: 'purple' }
+        };
+
+        function readProgress(student, caseId) {
+            try {
+                const p = JSON.parse(localStorage.getItem(`ner_v2_progress::${student}::${caseId}`) || 'null');
+                return p && p.v === 2 ? p : null;
+            } catch (e) { return null; }
+        }
+
         function loadCaseProgress() {
             const student = getStudentName();
-            if (!student) return;
-            ['anna','tyler','hannah'].forEach(caseId => {
-                const key = `${NER_PREFIX}${student}_${caseId}`;
-                const data = JSON.parse(localStorage.getItem(key) || '{}');
+            Object.entries(CASES).forEach(([caseId, info]) => {
                 const statusEl = document.getElementById(`${caseId}-status`);
                 const timeEl = document.getElementById(`${caseId}-time`);
-                if (data.completed) {
+                const progressEl = document.getElementById(`${caseId}-progress`);
+                const btn = document.getElementById(`${caseId}-start-btn`);
+                timeEl.classList.add('hidden');
+                progressEl.classList.add('hidden');
+
+                if (!student) {
+                    statusEl.innerHTML = '<i class="fas fa-circle text-slate-600"></i> Not started';
+                    btn.disabled = true;
+                    btn.textContent = 'Log in below to start';
+                    return;
+                }
+                btn.disabled = false;
+                const p = readProgress(student, caseId);
+                if (p && p.result) {
                     statusEl.innerHTML = '<i class="fas fa-check-circle text-green-400"></i> <span class="text-green-400">Completed</span>';
-                    if (data.caseTime && timeEl) {
-                        timeEl.querySelector('span').textContent = `Time: ${formatTime(data.caseTime)}`;
-                        timeEl.classList.remove('hidden');
-                    }
-                } else if (data.started) {
+                    timeEl.querySelector('span').textContent = `Score: ${p.result.correct}/${p.result.total} (${p.result.pct}%) · Time: ${formatTime(p.result.time)}`;
+                    timeEl.classList.remove('hidden');
+                    btn.innerHTML = `<i class="fas fa-book-open mr-1"></i> Review Case ${info.num}`;
+                } else if (p && (p.step > 0 || (caseId !== 'anna' && p.unlocked))) {
                     statusEl.innerHTML = '<i class="fas fa-play-circle text-yellow-400"></i> <span class="text-yellow-400">In progress</span>';
+                    if (p.totalSteps) {
+                        progressEl.textContent = `Saved at page ${p.step + 1} of ${p.totalSteps}`;
+                        progressEl.classList.remove('hidden');
+                    }
+                    btn.innerHTML = `<i class="fas fa-redo mr-1"></i> Resume Case ${info.num}`;
+                } else {
+                    statusEl.innerHTML = '<i class="fas fa-circle text-slate-600"></i> Not started';
+                    btn.innerHTML = `<i class="fas fa-play mr-1"></i> Start Case ${info.num}`;
                 }
             });
         }
 
+        // Each case opens in its own named tab. Clicking the same case again re-uses that tab
+        // instead of opening a second copy (two copies of one case would overwrite each other).
+        function openCase(caseId) {
+            const url = `nursing_escape_room_updated.html?case=${caseId}`;
+            const w = window.open(url, `ner_case_${caseId}`);
+            if (!w) window.location.href = url; // pop-up blocked — open in this tab instead
+            else w.focus();
+        }
+
+        document.querySelectorAll('.case-start-btn').forEach(btn => {
+            btn.addEventListener('click', () => { if (!btn.disabled) openCase(btn.dataset.case); });
+        });
+
         function showNameForm() {
             document.getElementById('name-form').classList.remove('hidden');
             document.getElementById('name-display').classList.add('hidden');
+            localStorage.removeItem('ner_current_student'); // must log in again (name + password)
+            loadCaseProgress();
         }
 
         function showNameDisplay(name) {
@@ -193,7 +264,7 @@
             const loginTimestamp = new Date().toISOString();
             localStorage.setItem(`${NER_PREFIX}${name}_login_timestamp`, loginTimestamp);
 
-            if (!SHEET_WEBHOOK_URL) {
+            if (!SHEET_WEBHOOK_URL || window.location.protocol === 'file:') {
                 console.warn('SHEET_WEBHOOK_URL is not set — skipping Google Sheet logging.');
                 return Promise.resolve();
             }
@@ -216,6 +287,8 @@
         if (savedName) {
             showNameDisplay(savedName);
             document.getElementById('student-name-input').value = savedName;
+        } else {
+            loadCaseProgress();
         }
 
         // Begin button (name + password form) — validate, save name, log to sheet, open escape room
@@ -252,7 +325,6 @@
                 btn.disabled = false;
                 statusEl.classList.add('hidden');
                 showNameDisplay(name);
-                window.open('nursing_escape_room_updated.html', '_blank');
             });
         };
 
@@ -265,14 +337,10 @@
 
         document.getElementById('change-name-btn').onclick = showNameForm;
 
-        // Begin button (when already logged in) — no password re-check needed, just re-enter
-        document.getElementById('begin-btn-logged-in').onclick = () => {
-            logNameToSheet(getStudentName());
-            window.open('nursing_escape_room_updated.html', '_blank');
-        };
-
-        // Refresh progress when tab gets focus (student may have completed a case)
+        // Refresh progress when this tab gets focus or a case tab saves (student may have progressed)
         window.addEventListener('focus', loadCaseProgress);
+        window.addEventListener('storage', loadCaseProgress);
+        document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') loadCaseProgress(); });
     </script>
 </body>
 </html>
